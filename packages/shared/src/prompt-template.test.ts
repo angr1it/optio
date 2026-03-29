@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { renderPromptTemplate, renderTaskFile, TASK_FILE_PATH } from "./prompt-template.js";
+import {
+  PR_BODY_FILE_PATH,
+  TASK_FILE_PATH,
+  renderPrBodyFile,
+  renderPromptTemplate,
+  renderTaskFile,
+} from "./prompt-template.js";
 
 describe("renderPromptTemplate", () => {
   it("replaces simple variables", () => {
@@ -49,14 +55,17 @@ describe("renderPromptTemplate", () => {
   it("handles multiple variables and conditionals", () => {
     const template = `Task: {{TASK_TITLE}}
 Branch: {{BRANCH_NAME}}
+PR Body: {{PR_BODY_FILE}}
 {{#if AUTO_MERGE}}Auto-merge enabled{{else}}Manual review{{/if}}`;
     const result = renderPromptTemplate(template, {
       TASK_TITLE: "Fix bug",
       BRANCH_NAME: "optio/task-123",
+      PR_BODY_FILE: ".optio/pr-body.md",
       AUTO_MERGE: "true",
     });
     expect(result).toContain("Fix bug");
     expect(result).toContain("optio/task-123");
+    expect(result).toContain(".optio/pr-body.md");
     expect(result).toContain("Auto-merge enabled");
   });
 });
@@ -71,6 +80,8 @@ describe("renderTaskFile", () => {
     expect(result).toContain("# Fix the login bug");
     expect(result).toContain("The login form doesn't validate email format.");
     expect(result).toContain("abc-123");
+    expect(result).toContain("## Required Repository Instructions");
+    expect(result).toContain("AGENTS.md");
   });
 
   it("includes ticket source when provided", () => {
@@ -80,9 +91,12 @@ describe("renderTaskFile", () => {
       taskId: "abc-123",
       ticketSource: "github",
       ticketUrl: "https://github.com/org/repo/issues/42",
+      specRef: "docs/specs/runtime-change.md",
     });
-    expect(result).toContain("github");
+    expect(result).toContain("Source issue:");
     expect(result).toContain("https://github.com/org/repo/issues/42");
+    expect(result).toContain("docs/specs/runtime-change.md");
+    expect(result).toContain("update the spec's `## Plan` checklist");
   });
 });
 
@@ -90,5 +104,38 @@ describe("TASK_FILE_PATH", () => {
   it("is a relative path", () => {
     expect(TASK_FILE_PATH).not.toMatch(/^\//);
     expect(TASK_FILE_PATH).toContain(".optio/");
+  });
+});
+
+describe("renderPrBodyFile", () => {
+  it("renders artifact chain and closure guidance", () => {
+    const result = renderPrBodyFile({
+      taskId: "task-1",
+      ticketSource: "github",
+      ticketExternalId: "42",
+      ticketUrl: "https://github.com/org/repo/issues/42",
+      specRef: "docs/specs/runtime-change.md",
+    });
+
+    expect(result).toContain("- Issue: `#42`");
+    expect(result).toContain("- Spec: `docs/specs/runtime-change.md`");
+    expect(result).toContain("Spec checklist/status updated");
+    expect(result).toContain("Closes #42");
+  });
+
+  it("renders N/A markers when no linked issue or spec exist", () => {
+    const result = renderPrBodyFile({
+      taskId: "task-2",
+    });
+
+    expect(result).toContain("N/A (no linked GitHub issue)");
+    expect(result).toContain("N/A (no linked spec)");
+  });
+});
+
+describe("PR_BODY_FILE_PATH", () => {
+  it("is a relative path", () => {
+    expect(PR_BODY_FILE_PATH).not.toMatch(/^\//);
+    expect(PR_BODY_FILE_PATH).toContain(".optio/");
   });
 });

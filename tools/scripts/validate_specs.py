@@ -22,7 +22,7 @@ REQUIRED_SECTIONS = [
     "Goal",
     "Why Now",
     "Scope",
-    "Local Plan",
+    "Plan",
     "Validation",
     "Rollout",
     "Links",
@@ -115,11 +115,11 @@ def lint_spec(path: Path) -> list[str]:
             continue
         sections[section] = body
 
-    local_plan = sections.get("Local Plan")
-    if local_plan is not None:
-        checklist_items = list(CHECKBOX_RE.finditer(local_plan))
+    plan = sections.get("Plan")
+    if plan is not None:
+        checklist_items = list(CHECKBOX_RE.finditer(plan))
         if not checklist_items:
-            issues.append(f"{rel}: '## Local Plan' must contain markdown checklist items")
+            issues.append(f"{rel}: '## Plan' must contain markdown checklist items")
         elif status == "Implemented":
             open_items = [
                 item.group("text").strip()
@@ -128,10 +128,10 @@ def lint_spec(path: Path) -> list[str]:
             ]
             if open_items:
                 issues.append(
-                    f"{rel}: Status 'Implemented' requires all '## Local Plan' checklist items to be completed"
+                    f"{rel}: Status 'Implemented' requires all '## Plan' checklist items to be completed"
                 )
 
-        for line in local_plan.splitlines():
+        for line in plan.splitlines():
             stripped = line.strip()
             if stripped == "":
                 continue
@@ -165,7 +165,7 @@ def lint_spec(path: Path) -> list[str]:
     for heading in HEADING_RE.finditer(text):
         title = heading.group("title").strip()
         if f"## {title}" not in required_headings and title.startswith("Local Plan"):
-            issues.append(f"{rel}: use the canonical heading '## Local Plan'")
+            issues.append(f"{rel}: use the canonical heading '## Plan'")
 
     return issues
 

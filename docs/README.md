@@ -12,5 +12,5 @@ Optio keeps process and design documentation separated from product runtime docs
 
 1. `AGENTS.md` and `docs/process/*` define mandatory workflow behavior.
 2. GitHub issues and PRs track active intent and delivery state.
-3. `docs/specs/*` defines design intent for non-trivial changes and should carry the execution checklist when a spec is in play.
+3. `docs/specs/*` defines design intent for non-trivial changes and should carry the `## Plan` execution checklist when a spec is in play.
 4. `README.md` and `CLAUDE.md` remain the primary product and architecture references.

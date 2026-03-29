@@ -11,7 +11,7 @@ REQUIRED_SECTIONS = [
     "Goal",
     "Why Now",
     "Scope",
-    "Local Plan",
+    "Plan",
     "Validation",
     "Rollout",
     "Links",
@@ -38,7 +38,7 @@ class SpecDoc:
     goal: str
     why_now: str
     scope: str
-    local_plan: str
+    plan: str
     validation: str
     rollout: str
     links: str
@@ -196,7 +196,7 @@ def parse_spec(path: Path) -> SpecDoc:
         goal=sections["Goal"],
         why_now=sections["Why Now"],
         scope=sections["Scope"],
-        local_plan=sections["Local Plan"],
+        plan=sections["Plan"],
         validation=sections["Validation"],
         rollout=sections["Rollout"],
         links=sections["Links"],
@@ -300,7 +300,7 @@ def render_governance_follow_up(spec: SpecDoc, deferred_items: list[str]) -> str
 
 
 def build_issue_draft(spec: SpecDoc) -> IssueDraft:
-    acceptance_criteria, deferred_items = build_acceptance_criteria(spec.local_plan, spec.scope)
+    acceptance_criteria, deferred_items = build_acceptance_criteria(spec.plan, spec.scope)
     body = "\n\n".join(
         [
             "## Summary\n\n" + spec.goal.strip(),

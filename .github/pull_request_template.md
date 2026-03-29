@@ -26,7 +26,7 @@
 
 <!-- Close the loop on spec lifecycle and deferred follow-ups. -->
 
-- [ ] Spec status updated (`Accepted` -> `Implemented` / `Superseded`) or `Spec: N/A`
+- [ ] Spec `## Plan` and `Status` updated (`Accepted` -> `Implemented` / `Superseded`) or `Spec: N/A`
 - [ ] Deferred or carry-over follow-ups were moved to GitHub issues / project items
 - Follow-up issue(s):
 

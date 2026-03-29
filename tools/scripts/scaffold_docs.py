@@ -69,7 +69,7 @@ Stage: {args.stage}
 - Included:
 - Non-goals:
 
-## Local Plan
+## Plan
 
 - [ ] Land the local code and documentation changes.
 - [ ] Run `make governance-check`.

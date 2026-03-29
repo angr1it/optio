@@ -40,11 +40,13 @@ It uses an agent-first delivery workflow on top of the existing product/runtime 
   - database, API contract, auth, or deployment changes
   - multi-package changes
   - local change sets you want to complete before the first cluster rollout
-- A spec should state goal, scope, local plan, validation, rollout impact, and links.
+- A spec should state goal, scope, plan, validation, rollout impact, and links.
+- `## Plan` is the execution checklist for both manual work and Optio task execution.
 - `Status` is lifecycle state, and must be one of: `Draft`, `Accepted`, `Implemented`, `Superseded`.
-- `## Local Plan` must be a checklist. If an item is deferred or carried over, link the follow-up issue directly in that checklist item.
+- `## Plan` must be a checklist. If an item is deferred or carried over, link the follow-up issue directly in that checklist item.
+- If a task or PR links a spec, update that spec's `## Plan` and `Status` in the same change set.
 - A spec is optional for small, self-contained fixes that do not materially change runtime behavior or deployment shape.
-- Sensitive changes under `apps/api/src/db/`, `apps/api/src/routes/`, `apps/api/src/workers/`, `helm/`, and `k8s/` must either touch a spec doc or provide an explicit spec reference through the local/PR validation path.
+- Sensitive changes under `apps/api/src/db/`, `apps/api/src/routes/`, `apps/api/src/workers/`, `helm/`, and `k8s/` must either touch a spec doc or provide an explicit local/PR validation reference; when a spec path is used, that same spec doc must be updated in the change set.
 
 ## Validation gates
 

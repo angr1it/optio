@@ -64,7 +64,7 @@ Optio keeps delivery planning artifacts under `docs/`:
 - `docs/specs/` for optional design specs
 - `docs/process/` for the repository workflow contract
 
-For non-trivial changes, especially local pre-cluster work, orchestration changes, API/schema changes, and multi-package changes, create or update a spec doc and keep it synchronized with the code.
+For non-trivial changes, especially local pre-cluster work, orchestration changes, API/schema changes, and multi-package changes, create or update a spec doc and keep its `## Plan` and `Status` synchronized with the code in the same change set.
 Use `make new-spec NAME=runtime-change ISSUE=\"#123\" STAGE=\"Local pre-deploy\"` to scaffold a new spec.
 Use `make governance-check` for docs/spec/policy validation, and `make check` for the full local gate.
 If you are intentionally reusing an existing spec without editing it, run the local gate with `SPEC_REF=docs/specs/<name>.md`.

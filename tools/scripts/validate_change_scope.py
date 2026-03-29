@@ -79,6 +79,10 @@ def find_changed_spec_docs(paths: list[str]) -> list[str]:
     return sorted(path for path in paths if SPEC_DOC_RE.match(path))
 
 
+def has_non_spec_changes(paths: list[str]) -> bool:
+    return any(not SPEC_DOC_RE.match(path) for path in paths)
+
+
 def extract_spec_ref_from_pr_body(body: str) -> str | None:
     match = PR_SPEC_RE.search(body)
     if match is None:
@@ -128,17 +132,29 @@ def lint_change_scope(
     root: Path = ROOT,
 ) -> list[str]:
     issues: list[str] = []
-    sensitive_paths = find_sensitive_paths(changed_files)
-    if not sensitive_paths:
-        return issues
-
-    changed_specs = find_changed_spec_docs(changed_files)
     effective_spec_ref = override_spec_ref or pr_spec_ref
     if effective_spec_ref is not None:
         spec_issue = validate_spec_ref(effective_spec_ref, root=root)
         if spec_issue is not None:
             issues.append(spec_issue)
             return issues
+
+        if (
+            effective_spec_ref.startswith("docs/specs/")
+            and has_non_spec_changes(changed_files)
+            and effective_spec_ref not in changed_files
+        ):
+            issues.append(
+                "a linked spec doc must be updated in the same change set so its '## Plan' and "
+                f"'Status' stay synchronized: {effective_spec_ref}"
+            )
+            return issues
+
+    sensitive_paths = find_sensitive_paths(changed_files)
+    if not sensitive_paths:
+        return issues
+
+    changed_specs = find_changed_spec_docs(changed_files)
 
     if in_pr_context:
         if effective_spec_ref is None:

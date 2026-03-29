@@ -14,6 +14,20 @@ class ValidateChangeScopeTests(unittest.TestCase):
         issues = validate_change_scope.lint_change_scope(["README.md"])
         self.assertEqual([], issues)
 
+    def test_linked_spec_must_be_updated_when_non_spec_files_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec_path = root / "docs" / "specs" / "runtime-change.md"
+            spec_path.parent.mkdir(parents=True, exist_ok=True)
+            spec_path.write_text("# Runtime Change\n", encoding="utf-8")
+
+            issues = validate_change_scope.lint_change_scope(
+                ["README.md"],
+                override_spec_ref="docs/specs/runtime-change.md",
+                root=root,
+            )
+            self.assertTrue(any("linked spec doc must be updated" in issue for issue in issues))
+
     def test_local_sensitive_change_requires_spec_or_override(self) -> None:
         issues = validate_change_scope.lint_change_scope(["apps/api/src/routes/issues.ts"])
         self.assertTrue(any("sensitive paths changed without a local spec reference" in issue for issue in issues))
@@ -41,7 +55,7 @@ class ValidateChangeScopeTests(unittest.TestCase):
             )
             self.assertTrue(any("referenced spec doc does not exist" in issue for issue in issues))
 
-    def test_override_spec_ref_passes_when_doc_exists(self) -> None:
+    def test_override_spec_ref_passes_when_doc_exists_and_spec_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec_path = root / "docs" / "specs" / "runtime-change.md"
@@ -49,7 +63,7 @@ class ValidateChangeScopeTests(unittest.TestCase):
             spec_path.write_text("# Runtime Change\n", encoding="utf-8")
 
             issues = validate_change_scope.lint_change_scope(
-                ["helm/optio/values.yaml"],
+                ["helm/optio/values.yaml", "docs/specs/runtime-change.md"],
                 override_spec_ref="docs/specs/runtime-change.md",
                 root=root,
             )

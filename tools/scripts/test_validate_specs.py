@@ -31,7 +31,7 @@ The repository needs a design artifact before runtime-sensitive work starts.
 - Non-goals:
   - Cluster rollout itself
 
-## Local Plan
+## Plan
 
 - [x] Update the process docs.
 - [ ] Run the full local gate.
@@ -80,15 +80,15 @@ class ValidateSpecsTests(unittest.TestCase):
     def test_lint_spec_requires_checklist_items_in_local_plan(self) -> None:
         issues = self._lint(
             VALID_SPEC.replace(
-                "## Local Plan\n\n- [x] Update the process docs.\n- [ ] Run the full local gate.",
-                "## Local Plan\n\n- Local change set:\n- Exit criteria before deploy:",
+                "## Plan\n\n- [x] Update the process docs.\n- [ ] Run the full local gate.",
+                "## Plan\n\n- Local change set:\n- Exit criteria before deploy:",
             )
         )
         self.assertTrue(any("must contain markdown checklist items" in issue for issue in issues))
 
     def test_implemented_specs_require_closed_local_plan(self) -> None:
         issues = self._lint(VALID_SPEC.replace("Status: Draft", "Status: Implemented"))
-        self.assertTrue(any("requires all '## Local Plan' checklist items to be completed" in issue for issue in issues))
+        self.assertTrue(any("requires all '## Plan' checklist items to be completed" in issue for issue in issues))
 
     def test_deferred_items_require_follow_up_issue(self) -> None:
         issues = self._lint(

@@ -878,9 +878,9 @@ export default function RepoDetailPage({ params }: { params: Promise<{ id: strin
           </button>
         </div>
         <p className="text-xs text-text-muted">
-          Custom skills are reusable prompt commands written to{" "}
-          <code className="text-primary">.claude/commands/</code> before the agent starts. The agent
-          can invoke them as slash commands.
+          Custom skills are mirrored into <code className="text-primary">.claude/commands/</code>{" "}
+          and <code className="text-primary">.codex/skills/</code> before the agent starts so the
+          same reusable instructions are available to Claude Code and Codex.
         </p>
 
         {skills.filter((s: any) => s.scope === repo.repoUrl || s.scope === "global").length > 0 && (

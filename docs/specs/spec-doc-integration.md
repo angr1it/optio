@@ -24,7 +24,7 @@ The repository already automates issue intake, task execution, PR watching, and 
   - replacing Optio runtime task state with docs
   - making a spec mandatory for every small change
 
-## Local Plan
+## Plan
 
 - [x] Update process docs so issues remain the default work item and specs become the optional design artifact.
 - [x] Add a spec validator and scaffold command so the workflow is easy to use locally.

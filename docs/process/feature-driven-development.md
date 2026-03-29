@@ -51,11 +51,13 @@ Specs live in `docs/specs/*.md` and should include:
 - `## Goal`
 - `## Why Now`
 - `## Scope`
-- `## Local Plan`
+- `## Plan`
 - `## Validation`
 - `## Rollout`
 - `## Links`
-- a checkbox-based `## Local Plan`
+- a checkbox-based `## Plan`
+
+`## Plan` is the execution checklist for the work, whether the slice is carried out manually or by an Optio task.
 
 `Status` is the lifecycle state for the spec and must stay within:
 
@@ -72,7 +74,7 @@ For local-first slices that exist before a GitHub issue is opened, use:
 
 This exception is for temporary local planning only, especially when you want to make and validate several repo changes before the first cluster deployment.
 
-If work is deferred or carried over, represent that in the `## Local Plan` checklist and point to the follow-up GitHub issue directly, for example:
+If work is deferred or carried over, represent that in the `## Plan` checklist and point to the follow-up GitHub issue directly, for example:
 
 - `- [ ] Carry over to #123: complete the rollout validation in-cluster`
 
@@ -80,6 +82,7 @@ If work is deferred or carried over, represent that in the `## Local Plan` check
 
 Run before asking for review:
 
+- `make governance-check`
 - `make test`
 - `make check`
 
@@ -106,6 +109,21 @@ If a change touches those paths, one of the following must be true:
 - a spec doc under `docs/specs/` is part of the same local change set
 - the local run passes an explicit spec reference such as `make governance-check SPEC_REF=docs/specs/runtime-change.md`
 - the PR description fills `- Spec:` with a spec doc path or explicit `N/A (reason)`
+
+If a spec doc is linked for a change set, keep that spec synchronized in the same change:
+
+- update the spec's `## Plan` checklist to reflect what this slice completed
+- move the spec `Status` when the slice changes the lifecycle state
+- do not treat a linked spec as read-only context while the implementation diverges from it
+
+## Agent execution contract
+
+Optio task sessions should behave the same regardless of whether the coding agent is Claude Code or Codex:
+
+- `.optio/task.md` is the primary execution contract
+- `.optio/task.md` must point the agent at `AGENTS.md`, `CLAUDE.md`, `docs/process/feature-driven-development.md`, and the linked spec when one exists
+- `.optio/pr-body.md` should be updated before `gh pr create` so the PR captures issue/spec links, validation, and closure evidence
+- if a task is linked to a spec, the agent is expected to update that spec before opening the PR
 
 PR closure should also capture:
 

@@ -50,7 +50,7 @@ Retry state can drift during worker restarts and needs a documented local-first 
 - Non-goals:
   - redesigning the task schema
 
-## Local Plan
+## Plan
 
 - [ ] Persist retry state before worker handoff.
 - [ ] Restore retry state during worker resume.

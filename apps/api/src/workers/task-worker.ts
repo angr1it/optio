@@ -3,8 +3,10 @@ import {
   TaskState,
   TASK_BRANCH_PREFIX,
   renderPromptTemplate,
+  renderPrBodyFile,
   renderTaskFile,
   TASK_FILE_PATH,
+  PR_BODY_FILE_PATH,
   DEFAULT_MAX_TURNS_CODING,
   DEFAULT_MAX_TURNS_REVIEW,
 } from "@optio/shared";
@@ -188,9 +190,22 @@ export function startTaskWorker() {
         const repoName = task.repoUrl.replace(/.*github\.com[/:]/, "").replace(/\.git$/, "");
         const branchName = `${TASK_BRANCH_PREFIX}${task.id}`;
         const taskFilePath = TASK_FILE_PATH;
+        const prBodyFilePath = PR_BODY_FILE_PATH;
+        const taskMetadata = (task.metadata as Record<string, unknown> | null) ?? null;
+        const specRef =
+          typeof taskMetadata?.specRef === "string" && taskMetadata.specRef.trim() !== ""
+            ? taskMetadata.specRef.trim()
+            : undefined;
+        const ticketUrl =
+          typeof taskMetadata?.ticketUrl === "string" && taskMetadata.ticketUrl.trim() !== ""
+            ? taskMetadata.ticketUrl.trim()
+            : typeof taskMetadata?.issueUrl === "string" && taskMetadata.issueUrl.trim() !== ""
+              ? taskMetadata.issueUrl.trim()
+              : undefined;
 
         const renderedPrompt = renderPromptTemplate(promptConfig.template, {
           TASK_FILE: taskFilePath,
+          PR_BODY_FILE: prBodyFilePath,
           BRANCH_NAME: branchName,
           TASK_ID: task.id,
           TASK_TITLE: task.title,
@@ -203,7 +218,15 @@ export function startTaskWorker() {
           taskBody: task.prompt,
           taskId: task.id,
           ticketSource: task.ticketSource ?? undefined,
-          ticketUrl: (task.metadata as any)?.ticketUrl,
+          ticketUrl,
+          specRef,
+        });
+        const prBodyFileContent = renderPrBodyFile({
+          taskId: task.id,
+          ticketSource: task.ticketSource ?? undefined,
+          ticketExternalId: task.ticketExternalId ?? undefined,
+          ticketUrl,
+          specRef,
         });
 
         // Apply review overrides if this is a review task
@@ -263,6 +286,12 @@ export function startTaskWorker() {
           log.info({ count: skills.length }, "Injecting custom skills");
         }
 
+        agentConfig.setupFiles = agentConfig.setupFiles ?? [];
+        agentConfig.setupFiles.push({
+          path: prBodyFilePath,
+          content: prBodyFileContent,
+        });
+
         // Encode setup files
         if (agentConfig.setupFiles && agentConfig.setupFiles.length > 0) {
           agentConfig.env.OPTIO_SETUP_FILES = Buffer.from(
@@ -276,6 +305,9 @@ export function startTaskWorker() {
           task.repoUrl,
         );
         const allEnv = { ...agentConfig.env, ...resolvedSecrets };
+        if (specRef) {
+          allEnv.OPTIO_SPEC_REF = specRef;
+        }
 
         // Force-restart: tell the exec script to use the existing PR branch
         if (restartFromBranch) {
