@@ -1,6 +1,5 @@
 # Format all staged files
 npx lint-staged
 
-# Run the same checks as CI to catch issues before push
-pnpm format:check
-pnpm turbo typecheck
+# Keep the default Husky path as the primary local hook flow.
+make hooks-pre-commit

@@ -6,6 +6,23 @@ import { normalizeRepoUrl } from "@optio/shared";
 import { retrieveSecret } from "../services/secret-service.js";
 import { logger } from "../logger.js";
 
+const ISSUE_SPEC_PATTERNS = [
+  /^\s*-\s*Primary spec:\s*`?(?<value>docs\/specs\/[^`\s]+\.md)`?\s*$/im,
+  /^\s*Primary spec:\s*`?(?<value>docs\/specs\/[^`\s]+\.md)`?\s*$/im,
+  /^\s*-\s*Spec:\s*`?(?<value>docs\/specs\/[^`\s]+\.md)`?\s*$/im,
+  /^\s*Spec:\s*`?(?<value>docs\/specs\/[^`\s]+\.md)`?\s*$/im,
+];
+
+export function extractSpecRefFromIssueBody(body: string): string | undefined {
+  for (const pattern of ISSUE_SPEC_PATTERNS) {
+    const match = pattern.exec(body);
+    if (match?.groups?.value) {
+      return match.groups.value.trim();
+    }
+  }
+  return undefined;
+}
+
 export async function issueRoutes(app: FastifyInstance) {
   // List GitHub issues from all configured repos
   app.get("/api/issues", async (req, reply) => {
@@ -199,6 +216,16 @@ export async function issueRoutes(app: FastifyInstance) {
     const { TaskState } = await import("@optio/shared");
     const { taskQueue } = await import("../workers/task-worker.js");
 
+    const issueUrl = `https://github.com/${owner}/${repoName}/issues/${body.issueNumber}`;
+    const specRef = extractSpecRefFromIssueBody(body.body);
+    const metadata: Record<string, unknown> = {
+      ticketUrl: issueUrl,
+      issueUrl,
+    };
+    if (specRef) {
+      metadata.specRef = specRef;
+    }
+
     const task = await taskServiceModule.createTask({
       title: body.title,
       prompt: `${body.title}\n\n${body.body}`,
@@ -206,7 +233,7 @@ export async function issueRoutes(app: FastifyInstance) {
       agentType: body.agentType ?? "claude-code",
       ticketSource: "github",
       ticketExternalId: String(body.issueNumber),
-      metadata: { issueUrl: `https://github.com/${owner}/${repoName}/issues/${body.issueNumber}` },
+      metadata,
       workspaceId: req.user?.workspaceId ?? null,
     });
 

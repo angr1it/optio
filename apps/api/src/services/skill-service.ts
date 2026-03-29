@@ -119,15 +119,57 @@ export async function getSkillsForTask(
 }
 
 /**
- * Build setup files for custom skills to be written to .claude/commands/ in the worktree.
+ * Build setup files for custom skills to be written into both Claude and Codex skill paths
+ * in the worktree so the same repo/workspace instructions remain available regardless of agent.
  */
 export function buildSkillSetupFiles(
   skills: CustomSkillConfig[],
 ): Array<{ path: string; content: string }> {
-  return skills.map((skill) => ({
-    path: `.claude/commands/${skill.name}.md`,
-    content: skill.prompt,
-  }));
+  return skills.flatMap((skill) => {
+    const codexDirName = toCodexSkillDirName(skill.name);
+    return [
+      {
+        path: `.claude/commands/${skill.name}.md`,
+        content: skill.prompt,
+      },
+      {
+        path: `.codex/skills/${codexDirName}/SKILL.md`,
+        content: renderCodexSkill(skill),
+      },
+    ];
+  });
+}
+
+function toCodexSkillDirName(name: string): string {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "custom-skill";
+}
+
+function renderCodexSkill(skill: CustomSkillConfig): string {
+  const description =
+    skill.description?.trim() ||
+    `Custom Optio skill mirrored from the skill registry: ${skill.name}`;
+  const body = skill.prompt.trim();
+
+  return [
+    "---",
+    `name: ${toYamlString(skill.name)}`,
+    `description: ${toYamlString(description)}`,
+    "---",
+    "",
+    `# ${skill.name}`,
+    "",
+    body,
+    "",
+  ].join("\n");
+}
+
+function toYamlString(value: string): string {
+  return JSON.stringify(value);
 }
 
 function mapRow(row: typeof customSkills.$inferSelect): CustomSkillConfig {

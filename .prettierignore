@@ -5,3 +5,5 @@ dist
 pnpm-lock.yaml
 *.sql
 helm
+agentic-template
+docs copy

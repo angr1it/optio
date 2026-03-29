@@ -57,6 +57,25 @@ pnpm format           # Format with Prettier
 pnpm lint             # Lint with ESLint
 ```
 
+### Planning And Execution Artifacts
+
+Optio keeps delivery planning artifacts under `docs/`:
+
+- `docs/specs/` for optional design specs
+- `docs/process/` for the repository workflow contract
+
+For non-trivial changes, especially local pre-cluster work, orchestration changes, API/schema changes, and multi-package changes, create or update a spec doc and keep its `## Plan` and `Status` synchronized with the code in the same change set.
+Use `make new-spec NAME=runtime-change ISSUE=\"#123\" STAGE=\"Local pre-deploy\"` to scaffold a new spec.
+Use `make governance-check` for docs/spec/policy validation, and `make check` for the full local gate.
+If you are intentionally reusing an existing spec without editing it, run the local gate with `SPEC_REF=docs/specs/<name>.md`.
+
+### Local Hooks
+
+- Husky is the default hook path in this repository.
+- `pre-commit` runs `make hooks-pre-commit`.
+- `pre-push` runs `make hooks-pre-push`.
+- `.pre-commit-config.yaml` is optional and mirrors the governance checks for contributors who already use `pre-commit`.
+
 ### Database Changes
 
 ```bash
@@ -91,10 +110,12 @@ chore: maintenance
 ## Pull Requests
 
 1. Fork the repo and create a feature branch
-2. Make your changes with tests
-3. Ensure `pnpm turbo typecheck` and `pnpm turbo test` pass
-4. Submit a PR using the template
-5. Wait for CI to pass and a maintainer review
+2. For non-trivial work, link a GitHub issue when available and keep any `docs/specs/*` artifact synchronized with your code changes
+3. Record carry-over or deferred work in GitHub issues / project fields, not markdown backlog files
+4. Make your changes with tests
+5. Ensure `make governance-check` and `make check` pass
+6. Submit a PR using the template and link the relevant issue and spec doc, or mark them `N/A (reason)`
+7. Wait for CI to pass and a maintainer review
 
 ## Code Style
 

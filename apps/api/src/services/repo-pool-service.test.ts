@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ── Mocks ───────────────────────────────────────────────────────────
 
+const mockExecFile = vi.fn();
+
 vi.mock("../db/client.js", () => ({
   db: {
     select: vi.fn().mockReturnThis(),
@@ -69,6 +71,32 @@ vi.mock("../logger.js", () => ({
   },
 }));
 
+vi.mock("node:child_process", () => ({
+  execFile: (
+    cmd: string,
+    args: string[],
+    cb: (err: Error | null, stdout?: string, stderr?: string) => void,
+  ) => {
+    mockExecFile(cmd, args)
+      .then((res: { stdout?: string; stderr?: string } | undefined) => {
+        cb(null, res?.stdout ?? "", res?.stderr ?? "");
+      })
+      .catch((err: Error) => cb(err));
+  },
+}));
+
+vi.mock("node:util", () => ({
+  promisify:
+    (fn: (...args: any[]) => void) =>
+    (...args: any[]) =>
+      new Promise((resolve, reject) => {
+        fn(...args, (err: Error | null, ...results: any[]) => {
+          if (err) reject(err);
+          else resolve(results.length <= 1 ? results[0] : results);
+        });
+      }),
+}));
+
 import { db } from "../db/client.js";
 import {
   resolveImage,
@@ -78,6 +106,21 @@ import {
   reconcileActiveTaskCounts,
   deleteNetworkPolicy,
 } from "./repo-pool-service.js";
+
+function resetDbMocks(): void {
+  const dbMock = db as any;
+  dbMock.select.mockReset().mockReturnThis();
+  dbMock.from.mockReset().mockReturnThis();
+  dbMock.where.mockReset();
+  dbMock.orderBy.mockReset().mockReturnThis();
+  dbMock.limit.mockReset().mockReturnThis();
+  dbMock.update.mockReset().mockReturnThis();
+  dbMock.set.mockReset().mockReturnThis();
+  dbMock.insert.mockReset().mockReturnThis();
+  dbMock.values.mockReset().mockReturnThis();
+  dbMock.returning.mockReset().mockResolvedValue([]);
+  dbMock.delete.mockReset().mockReturnThis();
+}
 
 // ── resolveImage ────────────────────────────────────────────────────
 
@@ -152,7 +195,12 @@ describe("resolveImage", () => {
 
 describe("releaseRepoPodTask", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetDbMocks();
+    mockRuntimeCreate.mockReset();
+    mockRuntimeExec.mockReset();
+    mockRuntimeStatus.mockReset();
+    mockRuntimeDestroy.mockReset();
+    mockExecFile.mockReset().mockResolvedValue({ stdout: "", stderr: "" });
   });
 
   it("decrements the active task count via DB update", async () => {
@@ -175,11 +223,16 @@ describe("releaseRepoPodTask", () => {
 
 describe("cleanupIdleRepoPods", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetDbMocks();
+    mockRuntimeCreate.mockReset();
+    mockRuntimeExec.mockReset();
+    mockRuntimeStatus.mockReset();
+    mockRuntimeDestroy.mockReset();
+    mockExecFile.mockReset().mockResolvedValue({ stdout: "", stderr: "" });
   });
 
   it("returns 0 when no idle pods exist", async () => {
-    vi.mocked(db.select().from(undefined as any).where as any).mockResolvedValueOnce([]);
+    vi.mocked((db as any).where).mockResolvedValueOnce([]);
 
     const cleaned = await cleanupIdleRepoPods();
     expect(cleaned).toBe(0);
@@ -196,10 +249,10 @@ describe("cleanupIdleRepoPods", () => {
       instanceIndex: 0,
     };
 
-    vi.mocked(db.select().from(undefined as any).where as any).mockResolvedValueOnce([idlePod]);
-
+    vi.mocked((db as any).where)
+      .mockResolvedValueOnce([idlePod])
+      .mockResolvedValueOnce(undefined);
     mockRuntimeDestroy.mockResolvedValueOnce(undefined);
-    vi.mocked(db.delete(undefined as any).where as any).mockResolvedValueOnce(undefined);
 
     const cleaned = await cleanupIdleRepoPods();
     expect(cleaned).toBe(1);
@@ -229,17 +282,17 @@ describe("cleanupIdleRepoPods", () => {
       },
     ];
 
-    vi.mocked(db.select().from(undefined as any).where as any).mockResolvedValueOnce(pods);
-
+    vi.mocked((db as any).where)
+      .mockResolvedValueOnce(pods)
+      .mockResolvedValueOnce(undefined);
     mockRuntimeDestroy
       .mockRejectedValueOnce(new Error("Failed to destroy"))
       .mockResolvedValueOnce(undefined);
 
-    vi.mocked(db.delete(undefined as any).where as any).mockResolvedValue(undefined);
-
     const cleaned = await cleanupIdleRepoPods();
-    // First pod fails, second succeeds
     expect(cleaned).toBe(1);
+    expect(mockRuntimeDestroy).toHaveBeenNthCalledWith(1, { id: "id-b", name: "pod-b" });
+    expect(mockRuntimeDestroy).toHaveBeenNthCalledWith(2, { id: "id-a", name: "pod-a" });
   });
 
   it("skips destroy if pod has no podName", async () => {
@@ -252,8 +305,9 @@ describe("cleanupIdleRepoPods", () => {
       instanceIndex: 0,
     };
 
-    vi.mocked(db.select().from(undefined as any).where as any).mockResolvedValueOnce([pod]);
-    vi.mocked(db.delete(undefined as any).where as any).mockResolvedValue(undefined);
+    vi.mocked((db as any).where)
+      .mockResolvedValueOnce([pod])
+      .mockResolvedValueOnce(undefined);
 
     const cleaned = await cleanupIdleRepoPods();
     expect(cleaned).toBe(1);
@@ -265,7 +319,7 @@ describe("cleanupIdleRepoPods", () => {
 
 describe("listRepoPods", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetDbMocks();
   });
 
   it("returns all pods from the database", async () => {
@@ -274,7 +328,7 @@ describe("listRepoPods", () => {
       { id: "pod-2", repoUrl: "url2", podName: "p2", state: "provisioning" },
     ];
 
-    vi.mocked(db.select().from as any).mockResolvedValueOnce(mockPods);
+    vi.mocked((db as any).from).mockResolvedValueOnce(mockPods);
 
     const result = await listRepoPods();
     expect(result).toEqual(mockPods);
@@ -285,12 +339,11 @@ describe("listRepoPods", () => {
 
 describe("reconcileActiveTaskCounts", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetDbMocks();
   });
 
   it("returns 0 when no pods exist", async () => {
-    // First call: select pods
-    vi.mocked(db.select().from as any).mockResolvedValueOnce([]);
+    vi.mocked((db as any).from).mockResolvedValueOnce([]);
 
     const result = await reconcileActiveTaskCounts();
     expect(result).toBe(0);
@@ -302,8 +355,6 @@ describe("reconcileActiveTaskCounts", () => {
       { id: "pod-2", activeTaskCount: 5 },
     ];
 
-    // The mock chain uses mockReturnThis, so all methods return the same db mock.
-    // where() calls are interleaved: SELECT count, UPDATE, SELECT count, UPDATE
     const dbMock = db as any;
     dbMock.from.mockResolvedValueOnce(pods);
     dbMock.where
@@ -333,37 +384,21 @@ describe("reconcileActiveTaskCounts", () => {
 // ── deleteNetworkPolicy ────────────────────────────────────────────
 
 describe("deleteNetworkPolicy", () => {
-  let mockExecFile: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockExecFile = vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
-    vi.doMock("node:child_process", () => ({
-      execFile: (cmd: string, args: string[], cb: any) => {
-        mockExecFile(cmd, args)
-          .then((res: any) => cb(null, res.stdout, res.stderr))
-          .catch((err: any) => cb(err));
-      },
-    }));
-    vi.doMock("node:util", () => ({
-      promisify:
-        (fn: any) =>
-        (...args: any[]) =>
-          new Promise((resolve, reject) => {
-            fn(...args, (err: any, ...results: any[]) => {
-              if (err) reject(err);
-              else resolve(results.length <= 1 ? results[0] : results);
-            });
-          }),
-    }));
+    mockExecFile.mockReset().mockResolvedValue({ stdout: "", stderr: "" });
   });
 
   it("calls kubectl delete with the correct policy name", async () => {
     await deleteNetworkPolicy("optio-repo-myorg-myrepo-abc1");
 
-    // The function uses dynamic import, so we can't easily assert the mock.
-    // Instead, verify it doesn't throw (the catch inside handles errors gracefully).
-    expect(true).toBe(true);
+    expect(mockExecFile).toHaveBeenCalledWith("kubectl", [
+      "delete",
+      "networkpolicy",
+      "optio-egress-optio-repo-myorg-myrepo-abc1",
+      "-n",
+      "optio",
+      "--ignore-not-found",
+    ]);
   });
 
   it("does not throw when deletion fails", async () => {

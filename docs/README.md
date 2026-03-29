@@ -1,0 +1,16 @@
+# Documentation Map
+
+Optio keeps process and design documentation separated from product runtime docs.
+
+## Process and governance
+
+- `docs/process/*` reusable delivery workflow and operating rules.
+- `docs/testing/*` test and validation policy.
+- `docs/specs/*` optional design specs for non-trivial or pre-deploy changes.
+
+## Priority of truth
+
+1. `AGENTS.md` and `docs/process/*` define mandatory workflow behavior.
+2. GitHub issues and PRs track active intent and delivery state.
+3. `docs/specs/*` defines design intent for non-trivial changes and should carry priority, sequencing, and the `## Plan` execution checklist when a spec is in play.
+4. `README.md` and `CLAUDE.md` remain the primary product and architecture references.

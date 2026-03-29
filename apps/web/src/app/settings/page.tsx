@@ -546,8 +546,10 @@ function GlobalSkills() {
     <div className="p-5 rounded-xl border border-border/50 bg-bg-card space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-text-muted">
-          Global skills are available as slash commands to agents in all repos. Written to{" "}
-          <code className="text-primary">.claude/commands/</code> before the agent starts.
+          Global skills are reusable agent instructions mirrored into{" "}
+          <code className="text-primary">.claude/commands/</code> and{" "}
+          <code className="text-primary">.codex/skills/</code> before the agent starts so the same
+          instructions are available to Claude Code and Codex.
         </p>
         <button
           onClick={() => setShowAdd(!showAdd)}

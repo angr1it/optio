@@ -1,0 +1,60 @@
+minimum_pre_commit_version: "3.6.0"
+default_stages:
+  - pre-commit
+
+repos:
+  - repo: local
+    hooks:
+      - id: docs-lint
+        name: docs-lint
+        entry: python3 tools/scripts/docs_lint.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-commit
+
+      - id: language-lint
+        name: language-lint
+        entry: python3 tools/scripts/language_lint.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-commit
+
+      - id: specs-lint
+        name: specs-lint
+        entry: python3 tools/scripts/validate_specs.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-commit
+
+      - id: change-scope-lint
+        name: change-scope-lint
+        entry: python3 tools/scripts/validate_change_scope.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-commit
+
+      - id: validator-unit-tests
+        name: validator-unit-tests
+        entry: python3 -m unittest discover -s tools/scripts -p test_*.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-commit
+
+      - id: make-check
+        name: make-check
+        entry: make check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-push
