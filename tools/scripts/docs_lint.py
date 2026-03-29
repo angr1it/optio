@@ -17,11 +17,8 @@ REQUIRED_FILES = [
     ROOT / ".pre-commit-config.yaml",
     ROOT / "docs" / "README.md",
     ROOT / "docs" / "process" / "feature-driven-development.md",
-    ROOT / "docs" / "roadmap" / "BACKLOG.md",
-    ROOT / "docs" / "roadmap" / "ARCHIVE_BACKLOG.md",
-    ROOT / "docs" / "roadmap" / "BACKLOG_TEMPLATE.md",
-    ROOT / "docs" / "roadmap" / "iterations" / "ITERATION_TEMPLATE.md",
-    ROOT / "docs" / "features" / "FEATURE_TEMPLATE.md",
+    ROOT / "docs" / "specs" / "README.md",
+    ROOT / "docs" / "specs" / "SPEC_TEMPLATE.md",
     ROOT / "docs" / "testing" / "overview.md",
 ]
 

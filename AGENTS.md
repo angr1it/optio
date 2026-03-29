@@ -71,6 +71,6 @@ Husky is the default local hook path. Governance validation logic lives in `tool
 
 ## Directory ownership
 
-- `docs/` process docs, specs, historical planning artifacts, and product screenshots.
+- `docs/` process docs, specs, and product screenshots.
 - `tools/scripts/` validation scripts and unit tests for governance checks.
 - `var/` generated validation artifacts.

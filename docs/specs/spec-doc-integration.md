@@ -11,7 +11,7 @@ Introduce a lightweight spec doc workflow for Optio so substantial local changes
 
 ## Why Now
 
-The repository already automates issue intake, task execution, PR watching, and review. Requiring markdown backlog and iteration artifacts on top of that duplicates the existing source of truth. A spec doc is still useful for local-first, cross-cutting, and rollout-sensitive changes.
+The repository already automates issue intake, task execution, PR watching, and review. A spec doc is still useful for local-first, cross-cutting, and rollout-sensitive changes without introducing a second planning system.
 
 ## Scope
 
@@ -37,7 +37,7 @@ The repository already automates issue intake, task execution, PR watching, and 
   - `make governance-check`
   - `make check`
 - Manual validation:
-  - Confirm PR and issue templates point contributors to `docs/specs/` instead of the old backlog/iteration chain.
+  - Confirm PR and issue templates point contributors to `docs/specs/`.
 - Deferred validation for cluster rollout:
   - Exercise the updated workflow in a real implementation slice before deployment.
 
@@ -48,7 +48,7 @@ The repository already automates issue intake, task execution, PR watching, and 
 - Rollout order:
   - Adopt the new spec flow for the next substantial local change set.
 - Rollback notes:
-  - Restore backlog/iteration validators to `governance-check` and revert the docs/template changes in one change set if the new flow proves insufficient.
+  - Revert the spec validators and docs/template changes in one change set if the new flow proves insufficient.
 
 ## Links
 
