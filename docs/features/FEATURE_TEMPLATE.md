@@ -1,5 +1,8 @@
 # <Feature title>
 
+This is a legacy template retained for archived bootstrap artifacts.
+Prefer `docs/specs/SPEC_TEMPLATE.md` for new design docs.
+
 Status: Draft | In Review | Accepted | Implemented | Superseded
 Owner: <team/person>
 Backlog: BLG-###

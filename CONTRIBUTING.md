@@ -61,12 +61,13 @@ pnpm lint             # Lint with ESLint
 
 Optio keeps delivery planning artifacts under `docs/`:
 
-- `docs/roadmap/` for backlog and iteration bundles
-- `docs/features/` for feature specs
+- `docs/specs/` for optional design specs
 - `docs/process/` for the repository workflow contract
 
-For non-trivial changes, keep code updates synchronized with backlog, feature, and iteration docs. Use `make test` and `make check` before closing an iteration slice.
-Use `make governance-check` when you want to run just the planning/documentation gate without the full project test suite.
+For non-trivial changes, especially local pre-cluster work, orchestration changes, API/schema changes, and multi-package changes, create or update a spec doc and keep it synchronized with the code.
+Use `make new-spec NAME=runtime-change ISSUE=\"#123\" STAGE=\"Local pre-deploy\"` to scaffold a new spec.
+Use `make governance-check` for docs/spec/policy validation, and `make check` for the full local gate.
+If you are intentionally reusing an existing spec without editing it, run the local gate with `SPEC_REF=docs/specs/<name>.md`.
 
 ### Local Hooks
 
@@ -109,11 +110,12 @@ chore: maintenance
 ## Pull Requests
 
 1. Fork the repo and create a feature branch
-2. For non-trivial work, keep the backlog, feature, and iteration artifacts in `docs/` synchronized with your code changes
-3. Make your changes with tests
-4. Ensure `make governance-check` and `make check` pass
-5. Submit a PR using the template and link the relevant `BLG-###`, feature spec, and iteration bundle
-6. Wait for CI to pass and a maintainer review
+2. For non-trivial work, link a GitHub issue when available and keep any `docs/specs/*` artifact synchronized with your code changes
+3. Record carry-over or deferred work in GitHub issues / project fields, not markdown backlog files
+4. Make your changes with tests
+5. Ensure `make governance-check` and `make check` pass
+6. Submit a PR using the template and link the relevant issue and spec doc, or mark them `N/A (reason)`
+7. Wait for CI to pass and a maintainer review
 
 ## Code Style
 

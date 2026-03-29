@@ -4,11 +4,10 @@
 
 ## Artifact Chain
 
-<!-- Link the governance artifacts for non-trivial work. Explain why any field is N/A. -->
+<!-- Link the source issue and optional spec doc. Explain why any field is N/A. -->
 
-- Backlog: `BLG-###` or `N/A`
-- Feature spec: `docs/features/...` or `N/A`
-- Iteration: `docs/roadmap/iterations/...` or `N/A`
+- Issue: `#123` or `N/A (reason)`
+- Spec: `docs/specs/...` or `N/A (reason)`
 
 ## Changes
 
@@ -20,15 +19,16 @@
 
 - [ ] Governance checks pass (`make governance-check`)
 - [ ] Full local gate passes (`make check`)
+- Commands run:
 - Additional evidence:
 
-## Docs Sync
+## Closure
 
-<!-- Confirm whether backlog/feature/iteration docs were updated in the same change set. -->
+<!-- Close the loop on spec lifecycle and deferred follow-ups. -->
 
-- [ ] Planning artifacts updated
-- [ ] Backlog/archive state synchronized
-- [ ] No planning doc changes required for this PR
+- [ ] Spec status updated (`Accepted` -> `Implemented` / `Superseded`) or `Spec: N/A`
+- [ ] Deferred or carry-over follow-ups were moved to GitHub issues / project items
+- Follow-up issue(s):
 
 ## Related
 

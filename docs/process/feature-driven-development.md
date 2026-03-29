@@ -2,7 +2,7 @@
 
 ## Objective
 
-Ship value in small, traceable feature slices with deterministic governance.
+Ship value in small, traceable slices without duplicating the issue and PR workflow that Optio already automates.
 
 This workflow is layered on top of the existing Optio monorepo and does not replace product architecture docs in `README.md` or `CLAUDE.md`.
 
@@ -12,59 +12,73 @@ This workflow is layered on top of the existing Optio monorepo and does not repl
 - User-facing conversation may use the user's preferred language.
 - Non-English repository text requires an explicit `NON_ENGLISH_OK: <reason>` escape hatch.
 
-## Artifact chain (mandatory)
+## Canonical artifact model
 
-1. Backlog item (`BLG-###`) in `docs/roadmap/BACKLOG.md`
-2. Feature spec in `docs/features/`
-3. Iteration execution bundle in `docs/roadmap/iterations/<id>/`
-4. Validation evidence from `make check`
-5. Iteration closure + backlog sync
+1. GitHub issue for the work item when one exists
+2. Optional spec doc in `docs/specs/` for design-heavy or rollout-sensitive work
+3. Optio task/runtime state in the application database
+4. Pull request for code review, CI, and merge
+5. Validation evidence from `make governance-check` and `make check`
 
-GitHub intake/review helpers should mirror this chain:
+GitHub and local docs should complement each other instead of duplicating each other:
 
-- Feature and bug issue templates should collect enough context to become a backlog item without re-triaging from scratch.
-- PRs should link backlog, feature, and iteration artifacts or explain why the chain is not needed.
+- Issues track intent and backlog state.
+- Specs capture design intent and local rollout planning.
+- PRs capture delivery and validation.
 
-## Backlog rules
+## When a spec is required
 
-- Keep one owner per item.
-- Keep acceptance criteria observable.
-- Keep unfinished work out of `Done`.
-- Move completed items to `docs/roadmap/ARCHIVE_BACKLOG.md`.
+Create or update a spec doc when the change:
 
-## Feature spec rules
+- changes agent orchestration, queues, review flow, or PR lifecycle behavior
+- changes API contracts, auth flow, database schema, or deployment behavior
+- spans multiple packages or multiple runtime surfaces
+- is intentionally being prepared locally before cluster rollout
 
-- One feature doc can cover one or more backlog items.
-- Spec must include scope, non-goals, acceptance criteria, test plan, and rollout notes.
-- Link feature docs from iteration artifacts.
+## When a spec is optional
 
-## Iteration rules
+A spec is usually unnecessary for:
 
-Each iteration folder must include:
+- small, isolated bug fixes
+- narrow test-only changes
+- contained UI polish with no behavioral or rollout risk
 
-- `iteration.md`
-- `execution-plan.md`
-- `status-report.md`
+## Spec rules
 
-`iteration.md` must define:
+Specs live in `docs/specs/*.md` and should include:
 
-- Scope
-- Definition of Done (DoD)
-- Carry-over
-- Closure
+- `Status`, `Owner`, `Issue`, and `Stage` headers
+- `## Goal`
+- `## Why Now`
+- `## Scope`
+- `## Local Plan`
+- `## Validation`
+- `## Rollout`
+- `## Links`
+- a checkbox-based `## Local Plan`
 
-`execution-plan.md` is the canonical execution tracker:
+`Status` is the lifecycle state for the spec and must stay within:
 
-- All actionable execution steps must be Markdown checkboxes (`- [ ]` / `- [x]`).
-- `status-report.md` should summarize progress, risks, validation, and follow-ups without repeating checklist text.
-- Closed iterations cannot leave open checkboxes in `execution-plan.md`.
-- If a step cannot be completed but the iteration must close, resolve it as a checked disposition such as:
-  - `- [x] Deferred: ... Follow-up: BLG-###`
-  - `- [x] Carried over: ... Follow-up: BLG-###`
+- `Draft`
+- `Accepted`
+- `Implemented`
+- `Superseded`
+
+`Issue:` should normally point to `#123`.
+
+For local-first slices that exist before a GitHub issue is opened, use:
+
+- `Issue: N/A (local pre-deploy planning)`
+
+This exception is for temporary local planning only, especially when you want to make and validate several repo changes before the first cluster deployment.
+
+If work is deferred or carried over, represent that in the `## Local Plan` checklist and point to the follow-up GitHub issue directly, for example:
+
+- `- [ ] Carry over to #123: complete the rollout validation in-cluster`
 
 ## Validation rules
 
-Run before closing a slice:
+Run before asking for review:
 
 - `make test`
 - `make check`
@@ -75,7 +89,29 @@ Local meaning:
 - `make governance-check` runs repository governance validators and validator unit tests.
 - `make check` runs format checks, governance validators, typecheck, and tests.
 
-If checks fail, iteration closure is blocked until resolved or explicitly deferred with backlog linkage.
+If checks fail, the slice is not review-ready.
+
+## Cross-artifact validation
+
+The governance gate is path-aware for the highest-risk repository surfaces:
+
+- `apps/api/src/db/`
+- `apps/api/src/routes/`
+- `apps/api/src/workers/`
+- `helm/`
+- `k8s/`
+
+If a change touches those paths, one of the following must be true:
+
+- a spec doc under `docs/specs/` is part of the same local change set
+- the local run passes an explicit spec reference such as `make governance-check SPEC_REF=docs/specs/runtime-change.md`
+- the PR description fills `- Spec:` with a spec doc path or explicit `N/A (reason)`
+
+PR closure should also capture:
+
+- commands that were actually run
+- whether the spec lifecycle moved to `Implemented` or `Superseded`
+- any carry-over follow-up issue IDs
 
 ## Local automation
 
@@ -89,6 +125,4 @@ If checks fail, iteration closure is blocked until resolved or explicitly deferr
 
 ## Scaffolding helpers
 
-- `make new-backlog ID=BLG-### TITLE=\"...\"`
-- `make new-feature NAME=feature-... BACKLOG=BLG-### ITERATION=ITR-###`
-- `make new-iteration ID=ITR-### BACKLOG_IDS=\"BLG-###\"`
+- `make new-spec NAME=spec-name ISSUE=\"#123\" STAGE=\"Local pre-deploy\"`

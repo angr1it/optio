@@ -8,54 +8,43 @@ It uses an agent-first delivery workflow on top of the existing product/runtime 
 
 ## Non-negotiables
 
-- Keep one canonical planning flow: **Backlog -> Feature spec -> Iteration -> Validation -> Closure**.
-- Keep active work traceable to backlog IDs (`BLG-###`).
-- Keep feature and iteration docs synchronized with implementation changes.
+- Keep one canonical planning flow: **Issue -> Optional spec -> Task -> PR -> Validation**.
+- Keep non-trivial work traceable to a GitHub issue when one exists.
+- Keep substantial local pre-cluster changes captured in a spec doc before cluster rollout work begins.
+- Keep spec docs synchronized with implementation changes when a spec is in play.
+- Keep deferred or carry-over work linked through GitHub issues/projects, not markdown backlog state.
 - Keep repository documentation, code comments, and docstrings in English.
 - User-facing conversation may follow the user's language, but repository files must stay in English.
-- Do not keep `Done` items in active backlog; move them to archive.
 - Keep product-specific architecture and operational guidance in `README.md` and `CLAUDE.md`; do not replace them with generic template prose.
 - Do not delete/rename staged files unless explicitly requested.
 
-## Required planning artifacts
+## Planning artifacts
 
-- Active backlog: `docs/roadmap/BACKLOG.md`
-- Backlog archive: `docs/roadmap/ARCHIVE_BACKLOG.md`
-- Backlog item template: `docs/roadmap/BACKLOG_TEMPLATE.md`
-- Feature specs: `docs/features/*.md`
-- Feature template: `docs/features/FEATURE_TEMPLATE.md`
-- Iteration folders: `docs/roadmap/iterations/<iteration-id>/`
-- Iteration template: `docs/roadmap/iterations/ITERATION_TEMPLATE.md`
+- Default work item: GitHub issue.
+- Optional design specs: `docs/specs/*.md`
+- Spec template: `docs/specs/SPEC_TEMPLATE.md`
 
-## Feature-driven workflow (required)
+## Spec-driven workflow (required)
 
-1. Create or update a backlog item (`BLG-###`) with clear scope and acceptance.
-2. If work is non-trivial, create/update a feature spec linked to the backlog item.
-3. Plan the slice in a concrete iteration folder with:
-   - `iteration.md`
-   - `execution-plan.md`
-   - `status-report.md`
-4. Implement only what is in the current iteration scope.
-5. Run validation gates and record evidence in iteration closure.
-6. Move completed backlog items to archive in the same change set.
+1. Start from a GitHub issue when one exists.
+2. If the work is cross-cutting, deployment-affecting, schema-affecting, or intentionally local-first before cluster rollout, create/update a spec doc under `docs/specs/`.
+3. Local pre-cluster planning may use `Issue: N/A (local pre-deploy planning)` until a GitHub issue exists.
+4. Implement only what is in the issue/spec scope.
+5. Run validation gates before asking for review.
+6. Link the issue and spec doc from the PR, or explicitly mark them as `N/A`.
 
-## Iteration governance
+## Spec rules
 
-At iteration start:
-
-- Define scope, non-goals, and Definition of Done.
-- Link all in-scope backlog items and feature specs.
-- Define required tests/validation checks.
-- Track actionable execution steps in `execution-plan.md` as Markdown checkboxes (`- [ ]` / `- [x]`).
-
-At iteration end:
-
-- Update closure status in `iteration.md`.
-- Resolve every `execution-plan.md` checkbox before closing the iteration.
-- If a step cannot be completed, convert it to a checked disposition such as `Deferred:` or `Carried over:` and link the follow-up backlog item.
-- Sync `status-report.md` and `execution-plan.md` without duplicating checklist text.
-- Record completed/deferred items and follow-ups.
-- Sync backlog state (archive `Done`, keep unfinished as non-`Done`).
+- A spec is required for:
+  - orchestration, agent workflow, queue, or PR lifecycle changes
+  - database, API contract, auth, or deployment changes
+  - multi-package changes
+  - local change sets you want to complete before the first cluster rollout
+- A spec should state goal, scope, local plan, validation, rollout impact, and links.
+- `Status` is lifecycle state, and must be one of: `Draft`, `Accepted`, `Implemented`, `Superseded`.
+- `## Local Plan` must be a checklist. If an item is deferred or carried over, link the follow-up issue directly in that checklist item.
+- A spec is optional for small, self-contained fixes that do not materially change runtime behavior or deployment shape.
+- Sensitive changes under `apps/api/src/db/`, `apps/api/src/routes/`, `apps/api/src/workers/`, `helm/`, and `k8s/` must either touch a spec doc or provide an explicit spec reference through the local/PR validation path.
 
 ## Validation gates
 
@@ -64,6 +53,8 @@ Required commands:
 - `make governance-check`
 - `make test`
 - `make check`
+
+If a sensitive change is intentionally reusing an existing spec without editing it, run the local gate with `SPEC_REF=docs/specs/<name>.md` or use `SPEC_REF='N/A (reason)'` when a spec is explicitly not needed.
 
 Recommended command:
 
@@ -80,6 +71,6 @@ Husky is the default local hook path. Governance validation logic lives in `tool
 
 ## Directory ownership
 
-- `docs/` process docs, planning artifacts, and product screenshots.
+- `docs/` process docs, specs, historical planning artifacts, and product screenshots.
 - `tools/scripts/` validation scripts and unit tests for governance checks.
 - `var/` generated validation artifacts.

@@ -1,28 +1,9 @@
 # Roadmap Governance
 
-Optio uses a **single backlog** and **single iteration stream** for agent-facing planning artifacts.
+This directory is retained for the earlier markdown governance bootstrap and is no longer the canonical planning surface for new work.
 
-## Files
+## Current guidance
 
-- Active backlog: `docs/roadmap/BACKLOG.md`
-- Archive backlog: `docs/roadmap/ARCHIVE_BACKLOG.md`
-- Backlog item template: `docs/roadmap/BACKLOG_TEMPLATE.md`
-- Iterations index: `docs/roadmap/iterations/README.md`
-
-## Lifecycle
-
-`Proposed -> Ready -> In Progress -> Done`
-
-Optional states:
-
-- `Blocked`
-- `Deferred`
-
-## Rules
-
-- Keep each item in exactly one canonical location (active backlog or archive).
-- Move `Done` items from active backlog to archive in the same change set.
-- Keep `Target iteration` as `TBD` when not committed.
-- Reference backlog IDs from feature specs and iteration artifacts.
-- Track execution steps in `execution-plan.md` with Markdown checkboxes.
-- Closed iterations must not leave open checkboxes in `execution-plan.md`.
+- New work should use GitHub issues as the backlog and `docs/specs/` for optional design docs.
+- The files in this directory are historical records from the governance migration.
+- Keep them unless there is a deliberate migration or cleanup plan.

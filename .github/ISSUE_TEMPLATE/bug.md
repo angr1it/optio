@@ -1,6 +1,6 @@
 ---
 name: Bug Intake
-about: Capture a bug in backlog-ready form
+about: Capture a bug in issue-ready form
 labels: bug
 ---
 
@@ -41,4 +41,4 @@ labels: bug
 
 ## Governance Follow-Up
 
-<!-- If confirmed, track the fix through docs/roadmap/BACKLOG.md, a feature spec if needed, and an iteration bundle. -->
+<!-- If the fix is cross-cutting, rollout-sensitive, or pre-deploy, add docs/specs/... before implementation starts. Carry-over work should stay in GitHub issues/project fields, not markdown backlog docs. -->

@@ -1,6 +1,6 @@
 ---
 name: Feature Intake
-about: Capture candidate feature work in backlog-ready form
+about: Capture candidate feature work in issue-ready form
 labels: enhancement
 ---
 
@@ -39,4 +39,4 @@ labels: enhancement
 
 ## Governance Follow-Up
 
-<!-- If accepted, convert this into docs/roadmap/BACKLOG.md, a feature spec, and an iteration bundle. -->
+<!-- If this becomes a non-trivial or pre-deploy slice, add docs/specs/... before implementation starts. Carry-over work should stay in GitHub issues/project fields, not markdown backlog docs. -->

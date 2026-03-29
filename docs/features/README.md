@@ -1,18 +1,9 @@
 # Feature Specs
 
-Feature specs capture implementation intent for one feature slice.
+This directory is retained for the earlier markdown governance bootstrap and is no longer the default location for new design work.
 
-## Naming
+## Current guidance
 
-Use one of:
-
-- `feature-<short-name>.md`
-- `<backlog-id>-<short-name>.md`
-
-## Required linkage
-
-- Link at least one backlog ID (`BLG-###`).
-- Link at least one iteration artifact.
-- Include test/validation expectations.
-
-Use `docs/features/FEATURE_TEMPLATE.md` as the baseline.
+- New non-trivial design docs should go under `docs/specs/`.
+- Keep existing files here for history unless there is a reason to migrate them.
+- `docs/features/FEATURE_TEMPLATE.md` remains available only for legacy bootstrap artifacts.
