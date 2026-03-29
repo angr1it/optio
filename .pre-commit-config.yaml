@@ -23,27 +23,18 @@ repos:
         stages:
           - pre-commit
 
-      - id: backlog-lint
-        name: backlog-lint
-        entry: python3 tools/scripts/validate_backlog.py
+      - id: specs-lint
+        name: specs-lint
+        entry: python3 tools/scripts/validate_specs.py
         language: system
         pass_filenames: false
         always_run: true
         stages:
           - pre-commit
 
-      - id: features-lint
-        name: features-lint
-        entry: python3 tools/scripts/validate_features.py
-        language: system
-        pass_filenames: false
-        always_run: true
-        stages:
-          - pre-commit
-
-      - id: iterations-lint
-        name: iterations-lint
-        entry: python3 tools/scripts/validate_iterations.py
+      - id: change-scope-lint
+        name: change-scope-lint
+        entry: python3 tools/scripts/validate_change_scope.py
         language: system
         pass_filenames: false
         always_run: true
