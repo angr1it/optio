@@ -183,6 +183,12 @@ helm/optio/           Helm chart for production Kubernetes deployment
 scripts/              Setup, init, and entrypoint scripts
 ```
 
+## Agent Workflow
+
+Optio now keeps agent-facing planning and delivery artifacts in [`docs/`](./docs), with repository operating rules in [`AGENTS.md`](./AGENTS.md) and product-specific architecture context in [`CLAUDE.md`](./CLAUDE.md).
+
+Use `make governance-check` for governance-only validation, `make test` for project tests plus validator unit tests, and `make check` for the full local gate: format check, governance validation, typecheck, and tests. Husky is the default local hook path; `.pre-commit-config.yaml` remains available as an optional mirror.
+
 ## Production Deployment
 
 Optio ships with a Helm chart for production Kubernetes clusters:

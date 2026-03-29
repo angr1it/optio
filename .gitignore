@@ -11,3 +11,12 @@ apps/api/.env
 /tmp/
 .optio/
 .claude/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+.python-version
+.DS_Store
+agentic-template/
+var/docs/*.json

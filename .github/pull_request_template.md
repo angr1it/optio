@@ -2,20 +2,37 @@
 
 <!-- What does this PR do and why? -->
 
+## Artifact Chain
+
+<!-- Link the governance artifacts for non-trivial work. Explain why any field is N/A. -->
+
+- Backlog: `BLG-###` or `N/A`
+- Feature spec: `docs/features/...` or `N/A`
+- Iteration: `docs/roadmap/iterations/...` or `N/A`
+
 ## Changes
 
 <!-- Key changes, organized by area -->
 
-## Testing
+## Validation
 
-<!-- How was this tested? -->
+<!-- What commands and evidence validate this change? -->
 
-- [ ] Tests pass (`pnpm turbo test`)
-- [ ] Typechecks pass (`pnpm turbo typecheck`)
+- [ ] Governance checks pass (`make governance-check`)
+- [ ] Full local gate passes (`make check`)
+- Additional evidence:
+
+## Docs Sync
+
+<!-- Confirm whether backlog/feature/iteration docs were updated in the same change set. -->
+
+- [ ] Planning artifacts updated
+- [ ] Backlog/archive state synchronized
+- [ ] No planning doc changes required for this PR
 
 ## Related
 
-<!-- Issues, PRs, docs, etc. -->
+<!-- External issues, PRs, docs, screenshots, or follow-ups -->
 
 Closes #
 

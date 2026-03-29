@@ -57,6 +57,24 @@ pnpm format           # Format with Prettier
 pnpm lint             # Lint with ESLint
 ```
 
+### Planning And Execution Artifacts
+
+Optio keeps delivery planning artifacts under `docs/`:
+
+- `docs/roadmap/` for backlog and iteration bundles
+- `docs/features/` for feature specs
+- `docs/process/` for the repository workflow contract
+
+For non-trivial changes, keep code updates synchronized with backlog, feature, and iteration docs. Use `make test` and `make check` before closing an iteration slice.
+Use `make governance-check` when you want to run just the planning/documentation gate without the full project test suite.
+
+### Local Hooks
+
+- Husky is the default hook path in this repository.
+- `pre-commit` runs `make hooks-pre-commit`.
+- `pre-push` runs `make hooks-pre-push`.
+- `.pre-commit-config.yaml` is optional and mirrors the governance checks for contributors who already use `pre-commit`.
+
 ### Database Changes
 
 ```bash
@@ -91,10 +109,11 @@ chore: maintenance
 ## Pull Requests
 
 1. Fork the repo and create a feature branch
-2. Make your changes with tests
-3. Ensure `pnpm turbo typecheck` and `pnpm turbo test` pass
-4. Submit a PR using the template
-5. Wait for CI to pass and a maintainer review
+2. For non-trivial work, keep the backlog, feature, and iteration artifacts in `docs/` synchronized with your code changes
+3. Make your changes with tests
+4. Ensure `make governance-check` and `make check` pass
+5. Submit a PR using the template and link the relevant `BLG-###`, feature spec, and iteration bundle
+6. Wait for CI to pass and a maintainer review
 
 ## Code Style
 
