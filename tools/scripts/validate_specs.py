@@ -18,10 +18,12 @@ ALLOWED_STAGES = {
     "Post-deploy follow-up",
     "Cross-cutting change",
 }
+ALLOWED_PRIORITIES = {"P0", "P1", "P2", "P3"}
 REQUIRED_SECTIONS = [
     "Goal",
     "Why Now",
     "Scope",
+    "Sequencing",
     "Plan",
     "Validation",
     "Rollout",
@@ -36,6 +38,7 @@ GITHUB_ISSUE_RE = re.compile(r"#\d+")
 HEADING_RE = re.compile(r"^## (?P<title>.+)$", re.MULTILINE)
 HEADER_TEMPLATE = r"^{label}:\s*(?P<value>.+?)\s*$"
 LINK_TEMPLATE = r"^\s*-\s*{label}:\s*(?P<value>.+?)\s*$"
+SPEC_DOC_REF_RE = re.compile(r"docs/specs/[A-Za-z0-9._/-]+\.md")
 
 
 def iter_spec_files() -> list[Path]:
@@ -77,6 +80,43 @@ def _extract_link_value(section_body: str, label: str) -> str | None:
     return match.group("value").strip()
 
 
+def _extract_labeled_list(section_body: str, label: str) -> list[str]:
+    prefix = f"- {label}:"
+    items: list[str] = []
+    active = False
+
+    for raw_line in section_body.splitlines():
+        stripped = raw_line.strip()
+        if stripped.startswith(prefix):
+            active = True
+            tail = stripped[len(prefix) :].strip()
+            if tail:
+                items.append(tail)
+            continue
+
+        if not active:
+            continue
+
+        if stripped == "":
+            continue
+
+        if raw_line.startswith("  - "):
+            items.append(raw_line[4:].strip())
+            continue
+
+        if stripped.startswith("- "):
+            active = False
+            continue
+
+        if raw_line.startswith("  "):
+            items.append(stripped)
+            continue
+
+        active = False
+
+    return items
+
+
 def lint_spec(path: Path) -> list[str]:
     issues: list[str] = []
     rel = path.relative_to(ROOT)
@@ -86,6 +126,7 @@ def lint_spec(path: Path) -> list[str]:
     owner = _extract_header_value(text, "Owner")
     issue_ref = _extract_header_value(text, "Issue")
     stage = _extract_header_value(text, "Stage")
+    priority = _extract_header_value(text, "Priority")
 
     if status is None:
         issues.append(f"{rel}: missing 'Status:' line")
@@ -106,6 +147,12 @@ def lint_spec(path: Path) -> list[str]:
     elif stage not in ALLOWED_STAGES:
         allowed = " | ".join(sorted(ALLOWED_STAGES))
         issues.append(f"{rel}: invalid Stage '{stage}' (expected: {allowed})")
+
+    if priority is None:
+        issues.append(f"{rel}: missing 'Priority:' line")
+    elif priority not in ALLOWED_PRIORITIES:
+        allowed = " | ".join(sorted(ALLOWED_PRIORITIES))
+        issues.append(f"{rel}: invalid Priority '{priority}' (expected: {allowed})")
 
     sections: dict[str, str] = {}
     for section in REQUIRED_SECTIONS:
@@ -139,6 +186,23 @@ def lint_spec(path: Path) -> list[str]:
                 issues.append(
                     f"{rel}: deferred/carry-over item must reference a GitHub issue (example: '#123')"
                 )
+
+    sequencing = sections.get("Sequencing")
+    if sequencing is not None:
+        for label in ("Blocked by", "Blocks", "Parallelizable with"):
+            items = _extract_labeled_list(sequencing, label)
+            if not items:
+                issues.append(f"{rel}: '## Sequencing' must include non-empty '- {label}:' items")
+                continue
+
+            for item in items:
+                if item.lower() == "none":
+                    continue
+                for ref in SPEC_DOC_REF_RE.findall(item):
+                    if not (ROOT / ref).exists():
+                        issues.append(
+                            f"{rel}: sequencing reference points to a missing spec doc: {ref}"
+                        )
 
     links = sections.get("Links")
     if links is not None:

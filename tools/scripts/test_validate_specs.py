@@ -15,6 +15,7 @@ Status: Draft
 Owner: platform
 Issue: N/A (local pre-deploy planning)
 Stage: Local pre-deploy
+Priority: P1
 
 ## Goal
 
@@ -30,6 +31,15 @@ The repository needs a design artifact before runtime-sensitive work starts.
   - Local workflow updates
 - Non-goals:
   - Cluster rollout itself
+
+## Sequencing
+
+- Blocked by:
+  - none
+- Blocks:
+  - #123
+- Parallelizable with:
+  - none
 
 ## Plan
 
@@ -77,6 +87,10 @@ class ValidateSpecsTests(unittest.TestCase):
         issues = self._lint(VALID_SPEC.replace("Status: Draft", "Status: Done"))
         self.assertTrue(any("invalid Status" in issue for issue in issues))
 
+    def test_lint_spec_requires_allowed_priority_values(self) -> None:
+        issues = self._lint(VALID_SPEC.replace("Priority: P1", "Priority: ASAP"))
+        self.assertTrue(any("invalid Priority" in issue for issue in issues))
+
     def test_lint_spec_requires_checklist_items_in_local_plan(self) -> None:
         issues = self._lint(
             VALID_SPEC.replace(
@@ -111,6 +125,15 @@ class ValidateSpecsTests(unittest.TestCase):
     def test_links_require_valid_pr_reference(self) -> None:
         issues = self._lint(VALID_SPEC.replace("- PR: pending", "- PR: to-be-added"))
         self.assertTrue(any("invalid PR link" in issue for issue in issues))
+
+    def test_sequencing_requires_non_empty_labels(self) -> None:
+        issues = self._lint(
+            VALID_SPEC.replace(
+                "- Blocked by:\n  - none\n- Blocks:\n  - #123\n- Parallelizable with:\n  - none",
+                "- Blocked by:\n- Blocks:\n  - #123\n- Parallelizable with:\n  - none",
+            )
+        )
+        self.assertTrue(any("'## Sequencing' must include non-empty '- Blocked by:' items" in issue for issue in issues))
 
 
 if __name__ == "__main__":

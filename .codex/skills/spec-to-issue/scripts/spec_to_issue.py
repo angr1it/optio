@@ -11,6 +11,7 @@ REQUIRED_SECTIONS = [
     "Goal",
     "Why Now",
     "Scope",
+    "Sequencing",
     "Plan",
     "Validation",
     "Rollout",
@@ -35,9 +36,11 @@ class SpecDoc:
     owner: str
     issue_ref: str
     stage: str
+    priority: str
     goal: str
     why_now: str
     scope: str
+    sequencing: str
     plan: str
     validation: str
     rollout: str
@@ -158,6 +161,7 @@ def parse_spec(path: Path) -> SpecDoc:
     owner = extract_header_value(text, "Owner")
     issue_ref = extract_header_value(text, "Issue")
     stage = extract_header_value(text, "Stage")
+    priority = extract_header_value(text, "Priority")
 
     missing: list[str] = []
     if status is None:
@@ -168,6 +172,8 @@ def parse_spec(path: Path) -> SpecDoc:
         missing.append("Issue")
     if stage is None:
         missing.append("Stage")
+    if priority is None:
+        missing.append("Priority")
 
     sections: dict[str, str] = {}
     for section in REQUIRED_SECTIONS:
@@ -185,6 +191,7 @@ def parse_spec(path: Path) -> SpecDoc:
     assert owner is not None
     assert issue_ref is not None
     assert stage is not None
+    assert priority is not None
 
     return SpecDoc(
         path=path,
@@ -193,9 +200,11 @@ def parse_spec(path: Path) -> SpecDoc:
         owner=owner,
         issue_ref=issue_ref,
         stage=stage,
+        priority=priority,
         goal=sections["Goal"],
         why_now=sections["Why Now"],
         scope=sections["Scope"],
+        sequencing=sections["Sequencing"],
         plan=sections["Plan"],
         validation=sections["Validation"],
         rollout=sections["Rollout"],
@@ -269,9 +278,23 @@ def render_related_context(spec: SpecDoc) -> str:
         f"- Primary spec: `{rel_path(spec.path)}`",
         f"- Spec status: `{spec.status}`",
         f"- Spec stage: `{spec.stage}`",
+        f"- Spec priority: `{spec.priority}`",
         f"- Spec owner: `{spec.owner}`",
         f"- Spec issue field: `{spec.issue_ref}`",
     ]
+
+    blocked_by = extract_labeled_list(spec.sequencing, "Blocked by")
+    blocks = extract_labeled_list(spec.sequencing, "Blocks")
+    parallel = extract_labeled_list(spec.sequencing, "Parallelizable with")
+    if blocked_by:
+        lines.append("- Blocked by:")
+        lines.extend(f"  - {item}" for item in blocked_by)
+    if blocks:
+        lines.append("- Blocks:")
+        lines.extend(f"  - {item}" for item in blocks)
+    if parallel:
+        lines.append("- Parallelizable with:")
+        lines.extend(f"  - {item}" for item in parallel)
 
     related_docs = extract_link_value(spec.links, "Related docs")
     if related_docs:

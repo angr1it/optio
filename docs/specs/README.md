@@ -15,13 +15,15 @@ Use `docs/specs/SPEC_TEMPLATE.md` as the baseline.
 
 Required structure:
 
-- lifecycle header: `Status`, `Owner`, `Issue`, `Stage`
-- design sections: `Goal`, `Why Now`, `Scope`, `Validation`, `Rollout`, `Links`
+- lifecycle header: `Status`, `Owner`, `Issue`, `Stage`, `Priority`
+- design sections: `Goal`, `Why Now`, `Scope`, `Sequencing`, `Validation`, `Rollout`, `Links`
 - execution checklist in `## Plan`
 
 Rules:
 
 - `Status` must stay within `Draft -> Accepted -> Implemented -> Superseded`.
+- `Priority` must stay within `P0 -> P3`.
+- `## Sequencing` should explicitly list `Blocked by`, `Blocks`, and optional `Parallelizable with`.
 - `## Plan` should be an actionable checklist, not free-form prose.
 - `## Plan` is the execution checklist for both manual work and Optio task execution.
 - Carry-over or deferred work must point to a GitHub issue such as `#123`.

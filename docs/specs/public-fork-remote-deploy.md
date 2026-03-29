@@ -4,6 +4,7 @@ Status: Draft
 Owner: platform
 Issue: N/A (local pre-deploy planning)
 Stage: Local pre-deploy
+Priority: P1
 
 ## Goal
 
@@ -28,6 +29,16 @@ The current gaps span image publishing, remote runtime prerequisites, edge expos
   - exposing browser-based shell access on the public edge
   - implementing external SSO or ForwardAuth in the same slice
   - designing a provider-agnostic multi-cloud deployment workflow
+
+## Sequencing
+
+- Blocked by:
+  - `docs/specs/operator-bootstrap-and-cluster-access.md`
+- Blocks:
+  - the first live public-fork cluster rollout
+  - any post-deploy hardening that assumes GHCR image publication and remote DOKS deployment already exist
+- Parallelizable with:
+  - local application changes that do not alter the remote deploy contract, image publication flow, or cluster edge shape
 
 ## Plan
 

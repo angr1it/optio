@@ -47,10 +47,11 @@ A spec is usually unnecessary for:
 
 Specs live in `docs/specs/*.md` and should include:
 
-- `Status`, `Owner`, `Issue`, and `Stage` headers
+- `Status`, `Owner`, `Issue`, `Stage`, and `Priority` headers
 - `## Goal`
 - `## Why Now`
 - `## Scope`
+- `## Sequencing`
 - `## Plan`
 - `## Validation`
 - `## Rollout`
@@ -67,6 +68,19 @@ Specs live in `docs/specs/*.md` and should include:
 - `Superseded`
 
 `Issue:` should normally point to `#123`.
+
+`Priority:` should express urgency and ordering pressure:
+
+- `P0`
+- `P1`
+- `P2`
+- `P3`
+
+`## Sequencing` should make execution order explicit:
+
+- what this spec is blocked by
+- what this spec blocks
+- what can proceed in parallel, if anything
 
 For local-first slices that exist before a GitHub issue is opened, use:
 
@@ -143,4 +157,4 @@ PR closure should also capture:
 
 ## Scaffolding helpers
 
-- `make new-spec NAME=spec-name ISSUE=\"#123\" STAGE=\"Local pre-deploy\"`
+- `make new-spec NAME=spec-name ISSUE=\"#123\" STAGE=\"Local pre-deploy\" PRIORITY=\"P1\"`

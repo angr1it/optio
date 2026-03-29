@@ -37,6 +37,7 @@ Keep the issue body faithful to the spec:
 - `## Goal` -> `## Summary`
 - `## Why Now` -> `## Why Now`
 - `## Scope` -> `## Scope`
+- `Priority` and `## Sequencing` -> `## Related Context`
 - `## Plan` -> `## Acceptance Criteria` after filtering out pure validation steps
 - `## Validation` and `## Rollout` -> `## Validation Signals`
 - `## Links` and spec metadata -> `## Related Context` / `## Governance Follow-Up`

@@ -4,6 +4,7 @@ Status: Draft | Accepted | Implemented | Superseded
 Owner: <team/person>
 Issue: #123 | N/A (local pre-deploy planning)
 Stage: Local pre-deploy | Cluster rollout | Post-deploy follow-up | Cross-cutting change
+Priority: P0 | P1 | P2 | P3
 
 ## Goal
 
@@ -13,6 +14,15 @@ Stage: Local pre-deploy | Cluster rollout | Post-deploy follow-up | Cross-cuttin
 
 - Included:
 - Non-goals:
+
+## Sequencing
+
+- Blocked by:
+  - none
+- Blocks:
+  - <spec, issue, or rollout step that stays blocked until this lands>
+- Parallelizable with:
+  - none
 
 ## Plan
 

@@ -4,6 +4,7 @@ Status: Draft
 Owner: platform
 Issue: N/A (local pre-deploy planning)
 Stage: Local pre-deploy
+Priority: P0
 
 ## Goal
 
@@ -27,6 +28,16 @@ This needs to be explicit before implementation so that convenience scripts do n
   - exposing browser-based shell access as an operator convenience
   - automating workstation package installation for every supported OS in the first slice
   - introducing a bastion, VPN, or external access broker in the same change set
+
+## Sequencing
+
+- Blocked by:
+  - none
+- Blocks:
+  - `docs/specs/public-fork-remote-deploy.md`
+  - the first live public-fork cluster rollout
+- Parallelizable with:
+  - local documentation cleanup that does not define remote bootstrap, secret sync, or operator access behavior
 
 ## Plan
 

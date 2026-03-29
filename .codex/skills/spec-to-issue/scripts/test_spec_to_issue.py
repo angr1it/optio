@@ -33,6 +33,7 @@ Status: Draft
 Owner: platform
 Issue: N/A (local pre-deploy planning)
 Stage: Cross-cutting change
+Priority: P0
 
 ## Goal
 
@@ -49,6 +50,15 @@ Retry state can drift during worker restarts and needs a documented local-first 
   - restore retry state during worker resume
 - Non-goals:
   - redesigning the task schema
+
+## Sequencing
+
+- Blocked by:
+  - none
+- Blocks:
+  - #456
+- Parallelizable with:
+  - none
 
 ## Plan
 
@@ -94,6 +104,8 @@ Retry state can drift during worker restarts and needs a documented local-first 
         self.assertIn("- Persist retry state before worker handoff.", draft.body)
         self.assertIn("- Restore retry state during worker resume.", draft.body)
         self.assertIn("- Carry-over items already called out in the spec:", draft.body)
+        self.assertIn("- Spec priority: `P0`", draft.body)
+        self.assertIn("- Blocks:", draft.body)
         self.assertIn("- Checks:", draft.body)
         self.assertIn("`make governance-check`", draft.body)
         self.assertIn("Primary spec:", draft.body)

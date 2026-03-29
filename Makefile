@@ -55,5 +55,6 @@ new-spec:
 		--owner "$(if $(OWNER),$(OWNER),platform)" \
 		--issue "$(if $(ISSUE),$(ISSUE),N/A (local pre-deploy planning))" \
 		--stage "$(if $(STAGE),$(STAGE),Local pre-deploy)" \
+		--priority "$(if $(PRIORITY),$(PRIORITY),P1)" \
 		$(if $(TITLE),--title "$(TITLE)",) \
 		$(if $(FORCE),--force,)

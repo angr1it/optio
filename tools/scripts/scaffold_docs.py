@@ -15,6 +15,7 @@ VALID_SPEC_STAGES = {
     "post-deploy follow-up",
     "cross-cutting change",
 }
+VALID_PRIORITIES = {"p0", "p1", "p2", "p3"}
 
 
 def _normalize_title(raw: str) -> str:
@@ -41,11 +42,17 @@ def _validate_spec_stage(stage: str) -> None:
         )
 
 
+def _validate_priority(priority: str) -> None:
+    if priority.strip().lower() not in VALID_PRIORITIES:
+        raise ValueError("priority must be one of: P0, P1, P2, P3")
+
+
 def create_spec_doc(args: argparse.Namespace) -> Path:
     _validate_non_empty(args.name, "name")
     _validate_non_empty(args.owner, "owner")
     _validate_issue_ref(args.issue)
     _validate_spec_stage(args.stage)
+    _validate_priority(args.priority)
 
     file_name = args.name if args.name.endswith(".md") else f"{args.name}.md"
     path = SPECS_DIR / file_name
@@ -59,6 +66,7 @@ Status: Draft
 Owner: {args.owner}
 Issue: {args.issue}
 Stage: {args.stage}
+Priority: {args.priority}
 
 ## Goal
 
@@ -68,6 +76,15 @@ Stage: {args.stage}
 
 - Included:
 - Non-goals:
+
+## Sequencing
+
+- Blocked by:
+  - none
+- Blocks:
+  - <spec, issue, or rollout step that stays blocked until this lands>
+- Parallelizable with:
+  - none
 
 ## Plan
 
@@ -110,6 +127,7 @@ def _build_parser() -> argparse.ArgumentParser:
     spec.add_argument("--owner", default="platform")
     spec.add_argument("--issue", default="N/A (local pre-deploy planning)")
     spec.add_argument("--stage", default="Local pre-deploy")
+    spec.add_argument("--priority", default="P1")
     spec.add_argument("--title")
     spec.add_argument("--force", action="store_true")
 

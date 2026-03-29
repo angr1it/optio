@@ -41,6 +41,7 @@ It uses an agent-first delivery workflow on top of the existing product/runtime 
   - multi-package changes
   - local change sets you want to complete before the first cluster rollout
 - A spec should state goal, scope, plan, validation, rollout impact, and links.
+- A spec should declare execution priority and sequencing (`blocked by`, `blocks`, optional parallel work) so the order of rollout-sensitive work is explicit.
 - `## Plan` is the execution checklist for both manual work and Optio task execution.
 - `Status` is lifecycle state, and must be one of: `Draft`, `Accepted`, `Implemented`, `Superseded`.
 - `## Plan` must be a checklist. If an item is deferred or carried over, link the follow-up issue directly in that checklist item.

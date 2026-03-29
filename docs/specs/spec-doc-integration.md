@@ -4,6 +4,7 @@ Status: Implemented
 Owner: platform
 Issue: N/A (local pre-deploy planning)
 Stage: Local pre-deploy
+Priority: P0
 
 ## Goal
 
@@ -23,6 +24,16 @@ The repository already automates issue intake, task execution, PR watching, and 
 - Non-goals:
   - replacing Optio runtime task state with docs
   - making a spec mandatory for every small change
+
+## Sequencing
+
+- Blocked by:
+  - none
+- Blocks:
+  - `docs/specs/operator-bootstrap-and-cluster-access.md`
+  - `docs/specs/public-fork-remote-deploy.md`
+- Parallelizable with:
+  - none
 
 ## Plan
 
