@@ -167,6 +167,10 @@ This installs:
 3. `metrics-server`
 4. `letsencrypt-prod` `ClusterIssuer`
 
+The bootstrap workflow enables nginx snippet annotations on the fork-owned
+ingress controller because the upstream chart blocks `/api/internal/*` using an
+`nginx.ingress.kubernetes.io/server-snippet`.
+
 ## Step 10: Point DNS
 
 After bootstrap:
