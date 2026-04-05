@@ -1,0 +1,76 @@
+# Fork production skeleton for DOKS.
+# This file is consumed by fork deploy workflows.
+# Secrets are injected at deploy time by `.github/workflows/fork-deploy-production.yml`.
+# Image repositories and tags are overridden by the fork deploy workflow.
+# The values below are only lint-friendly defaults.
+
+# Keep namespace fixed to avoid drift from upstream chart defaults.
+namespace: optio
+
+api:
+  replicas: 1
+  image:
+    repository: optio-api
+    tag: v0.0.0
+    pullPolicy: IfNotPresent
+  antiAffinity: soft
+  autoscaling:
+    enabled: false
+
+web:
+  replicas: 1
+  image:
+    repository: optio-web
+    tag: v0.0.0
+    pullPolicy: IfNotPresent
+  antiAffinity: soft
+  autoscaling:
+    enabled: false
+
+optio:
+  enabled: true
+  image:
+    repository: optio-optio
+    tag: v0.0.0
+    pullPolicy: IfNotPresent
+
+agent:
+  image:
+    repository: optio-agent-base
+    tag: v0.0.0
+    pullPolicy: IfNotPresent
+  imagePullPolicy: IfNotPresent
+
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+auth:
+  disabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+  certManager:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    pods: "25"
+    persistentvolumeclaims: "20"
+
+serviceAccount:
+  create: true
+  name: optio

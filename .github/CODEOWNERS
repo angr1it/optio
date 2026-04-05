@@ -1,0 +1,6 @@
+# Replace these owners if you deploy from a fork or an organization account.
+
+/.github/workflows/ @angr1it
+/deploy/ @angr1it
+/helm/optio/ @angr1it
+/docs/ @angr1it

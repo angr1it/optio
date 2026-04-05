@@ -1,0 +1,65 @@
+name: Fork Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to deploy, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: fork-deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Fork Optio To DOKS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Production secrets and cluster credentials are released only after protected-environment approval.
+    environment:
+      name: production
+      url: ${{ vars.OPTIO_PUBLIC_URL }}
+    env:
+      DO_CLUSTER_NAME: ${{ vars.DO_CLUSTER_NAME }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      OPTIO_DOMAIN: ${{ vars.OPTIO_DOMAIN }}
+      OPTIO_PUBLIC_URL: ${{ vars.OPTIO_PUBLIC_URL }}
+      EXTERNAL_DATABASE_URL: ${{ secrets.EXTERNAL_DATABASE_URL }}
+      EXTERNAL_REDIS_URL: ${{ secrets.EXTERNAL_REDIS_URL }}
+      OPTIO_ENCRYPTION_KEY: ${{ secrets.OPTIO_ENCRYPTION_KEY }}
+      AUTH_GITHUB_CLIENT_ID: ${{ secrets.AUTH_GITHUB_CLIENT_ID }}
+      AUTH_GITHUB_CLIENT_SECRET: ${{ secrets.AUTH_GITHUB_CLIENT_SECRET }}
+      GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
+      GITHUB_APP_CLIENT_ID: ${{ secrets.GITHUB_APP_CLIENT_ID }}
+      GITHUB_APP_CLIENT_SECRET: ${{ secrets.GITHUB_APP_CLIENT_SECRET }}
+      GITHUB_APP_INSTALLATION_ID: ${{ secrets.GITHUB_APP_INSTALLATION_ID }}
+      GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+      GITHUB_APP_BOT_NAME: ${{ secrets.GITHUB_APP_BOT_NAME }}
+      GITHUB_APP_BOT_EMAIL: ${{ secrets.GITHUB_APP_BOT_EMAIL }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@135ac0aa0eed4437d547c6f12c364d3006b42824 # v2.5.1
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4.0.1
+
+      - name: Install Helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+
+      - name: Deploy
+        run: bash deploy/scripts/deploy-production.sh
+
+      - name: Verify public endpoints
+        run: bash deploy/scripts/verify-production.sh

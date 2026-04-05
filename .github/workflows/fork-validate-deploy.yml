@@ -1,0 +1,39 @@
+name: Fork Validate Deploy Config
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-config:
+    name: Deploy Config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+      - name: Lint and render production Helm values
+        run: |
+          set -euo pipefail
+          HELM_ARGS=(
+            -f deploy/values.fork-production.yaml
+            --set-string publicUrl=https://optio.example.com
+            --set-string encryption.key=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+            --set-string externalDatabase.url=postgres://optio:optio@db.internal:5432/optio
+            --set-string externalRedis.url=redis://redis.internal:6379
+            --set-string auth.github.clientId=dummy-client-id
+            --set-string auth.github.clientSecret=dummy-client-secret
+          )
+
+          helm lint ./helm/optio "${HELM_ARGS[@]}"
+          helm template optio ./helm/optio "${HELM_ARGS[@]}" >/dev/null
+
+          # Contract: fork overlay keeps resources in optio namespace.
+          DEFAULT_RENDER="$(mktemp)"
+          helm template optio ./helm/optio "${HELM_ARGS[@]}" > "${DEFAULT_RENDER}"
+          rg -q "namespace: optio" "${DEFAULT_RENDER}"

@@ -1,0 +1,44 @@
+name: Fork Bootstrap DOKS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-bootstrap-doks
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Bootstrap Fork Cluster Add-ons
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Production secrets and cluster credentials are released only after protected-environment approval.
+    environment:
+      name: production
+      url: ${{ vars.OPTIO_PUBLIC_URL }}
+    env:
+      DO_CLUSTER_NAME: ${{ vars.DO_CLUSTER_NAME }}
+      LETSENCRYPT_EMAIL: ${{ vars.LETSENCRYPT_EMAIL }}
+      INGRESS_NGINX_CHART_VERSION: "4.11.3"
+      CERT_MANAGER_CHART_VERSION: "v1.16.2"
+      METRICS_SERVER_CHART_VERSION: "3.12.2"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@135ac0aa0eed4437d547c6f12c364d3006b42824 # v2.5.1
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4.0.1
+
+      - name: Install Helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+
+      - name: Bootstrap DOKS add-ons
+        run: bash deploy/scripts/bootstrap-doks.sh
