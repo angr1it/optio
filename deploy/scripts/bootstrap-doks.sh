@@ -23,6 +23,8 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
   --version "${ingress_nginx_chart_version}" \
   --namespace ingress-nginx \
   --create-namespace \
+  --set controller.allowSnippetAnnotations=true \
+  --set controller.config.annotations-risk-level=Critical \
   --wait \
   --timeout 10m
 
