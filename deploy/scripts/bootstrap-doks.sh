@@ -41,6 +41,9 @@ helm upgrade --install metrics-server metrics-server/metrics-server \
   --timeout 10m
 
 kubectl create namespace "${namespace}" --dry-run=client -o yaml | kubectl apply -f -
+kubectl label namespace "${namespace}" app.kubernetes.io/managed-by=Helm --overwrite
+kubectl annotate namespace "${namespace}" meta.helm.sh/release-name=optio --overwrite
+kubectl annotate namespace "${namespace}" meta.helm.sh/release-namespace="${namespace}" --overwrite
 
 sed "s/__LETSENCRYPT_EMAIL__/${LETSENCRYPT_EMAIL}/g" "${repo_root}/deploy/cluster-issuer.yaml" \
   | kubectl apply -f -
