@@ -16,6 +16,7 @@ See `../docs/fork-sync-policy.md` for the full sync policy.
 ## Files
 
 - `cluster-issuer.yaml`: cert-manager `ClusterIssuer` template used by fork bootstrap automation.
+- `limitrange.yaml`: default namespace resource requests/limits so hook pods comply with quota.
 - `values.fork-production.yaml`: fork production Helm overlay consumed by fork validate/deploy flows.
 - `scripts/bootstrap-doks.sh`: installs cluster add-ons and applies `ClusterIssuer`.
 - `scripts/deploy-production.sh`: pulls released chart artifacts and deploys to DOKS.
