@@ -39,14 +39,16 @@ Before starting, ensure you have:
 
 Configure repository settings:
 
-1. Protect `main`
-2. Require CI checks before merge
-3. Add `CODEOWNERS` coverage for:
+1. Keep `main` reserved for upstream sync only
+2. Protect `develop`
+3. Require CI checks before merge into `develop`
+4. Optionally protect `main` as well to prevent accidental fork commits there
+5. Add `CODEOWNERS` coverage for:
    - `.github/workflows/`
    - `deploy/`
    - `docs/fork-*`
-4. Create GitHub environment `production`
-5. Add required reviewers to `production`
+6. Create GitHub environment `production`
+7. Add required reviewers to `production`
 
 ## Step 2: Create DigitalOcean Network
 
@@ -144,6 +146,8 @@ Fork Validate Deploy Config
 
 Expected result: Helm lint/template pass with fork overlay and namespace contract checks.
 
+This workflow is wired to `develop` pushes and PRs, with `workflow_dispatch` available for manual runs.
+
 ## Step 9: Bootstrap the Cluster
 
 Run workflow:
@@ -174,6 +178,8 @@ Do not deploy app until DNS resolves correctly.
 1. Create and push tag:
 
 ```bash
+git checkout develop
+git pull --ff-only origin develop
 git tag v0.1.0
 git push origin v0.1.0
 ```

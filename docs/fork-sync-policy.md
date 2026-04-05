@@ -40,15 +40,21 @@ The fork deployment path is:
 
 Runtime deploy logic is executed from `deploy/scripts/*` and consumes the fork deployment assets under `deploy/*`.
 
+## Branch Model
+
+- `main` mirrors upstream and should stay free of fork-owned deploy changes.
+- `develop` is the fork-owned integration, release, and deploy branch.
+
 ## Upstream Sync Procedure
 
-1. Sync your branch with upstream `main`.
-2. For conflicts outside the fork-owned paths above, take upstream by default.
-3. For conflicts inside the fork-owned paths, keep fork behavior and only update when intentionally refactoring the fork deploy layer.
-4. After conflict resolution, run:
+1. Sync local `main` with upstream `main`.
+2. Merge or rebase `main` into `develop`.
+3. For conflicts outside the fork-owned paths above, take upstream by default.
+4. For conflicts inside the fork-owned paths, keep fork behavior and only update when intentionally refactoring the fork deploy layer.
+5. After conflict resolution on `develop`, run:
    - `Fork Validate Deploy Config`
    - a dry run of `Fork Release` (sha tag path is acceptable)
-5. Before production rollout, run `Fork Deploy Production` in the protected `production` environment with a released semver tag.
+6. Before production rollout, run `Fork Deploy Production` in the protected `production` environment with a released semver tag created from `develop`.
 
 ## Guardrails
 

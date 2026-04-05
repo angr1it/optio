@@ -25,6 +25,11 @@ Fork deployment customizations live only in:
 
 See `docs/fork-sync-policy.md` for upstream sync rules.
 
+## Branch Model
+
+- `main` tracks upstream and stays deploy-neutral.
+- `develop` is the fork-owned integration, release, and deploy branch.
+
 ## Trust Boundaries
 
 ### Untrusted
@@ -86,7 +91,7 @@ Purpose:
 
 Rules:
 
-- Runs on PR, push to `main`, and manual dispatch
+- Runs on PR, push to `develop`, and manual dispatch
 - Uses no production secrets
 
 ### Fork Cluster Bootstrap
@@ -149,13 +154,15 @@ Use GitHub `production` environment secrets for production-only data:
 
 ## Deployment Flow
 
-1. Merge code into `main`.
-2. Run `Fork Validate Deploy Config`.
-3. Create and push a release tag like `v0.1.0`.
-4. Run `Fork Release` from that tag ref.
-5. Run `Fork Deploy Production` with `release_tag=v0.1.0`.
-6. Approve `production` environment when prompted.
-7. Workflow deploys with Helm, checks rollout, runs `helm test`, and verifies public endpoints.
+1. Sync local `main` from upstream `main`.
+2. Merge `main` into `develop`.
+3. Land fork changes in `develop`.
+4. Run `Fork Validate Deploy Config` on `develop`.
+5. Create and push a release tag like `v0.1.0` from `develop`.
+6. Run `Fork Release` from that tag ref.
+7. Run `Fork Deploy Production` with `release_tag=v0.1.0`.
+8. Approve `production` environment when prompted.
+9. Workflow deploys with Helm, checks rollout, runs `helm test`, and verifies public endpoints.
 
 ## Rollback Strategy
 

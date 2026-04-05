@@ -85,8 +85,9 @@ These items are completed in GitHub settings, DigitalOcean, and DNS.
 
 ### 2.1 GitHub protection and environments
 
-- [ ] Protect `main`
-- [ ] Require CI checks before merge
+- [ ] Keep `main` reserved for upstream sync only
+- [ ] Protect `develop`
+- [ ] Require CI checks before merge into `develop`
 - [ ] Add `CODEOWNERS` coverage for `.github/workflows/`, `deploy/`, and `docs/fork-*`
 - [ ] Create environment `production`
 - [ ] Require approvers for `production`
@@ -158,7 +159,7 @@ Done when:
 You can call the fork deployment path beta-ready when:
 
 - [ ] Scope rule is enforced (`fork-*` workflows, `deploy/*`, `deploy/scripts/*`, `docs/fork-*`)
-- [ ] `Fork Validate Deploy Config` passes on current `main`
+- [ ] `Fork Validate Deploy Config` passes on current `develop`
 - [ ] `Fork Bootstrap DOKS` succeeded on target cluster
 - [ ] `Fork Release` produced artifacts for release tag
 - [ ] `Fork Deploy Production` succeeded for real release tag
