@@ -54,6 +54,7 @@ kubectl create namespace "${namespace}" --dry-run=client -o yaml | kubectl apply
 kubectl label namespace "${namespace}" app.kubernetes.io/managed-by=Helm --overwrite
 kubectl annotate namespace "${namespace}" meta.helm.sh/release-name="${release}" --overwrite
 kubectl annotate namespace "${namespace}" meta.helm.sh/release-namespace="${namespace}" --overwrite
+kubectl apply -f "${repo_root}/deploy/limitrange.yaml"
 
 if [[ -n "${GITHUB_APP_ID:-}" ]]; then
   private_key_file="${runner_temp}/github-app.pem"

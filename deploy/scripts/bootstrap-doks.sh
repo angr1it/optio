@@ -46,6 +46,7 @@ kubectl create namespace "${namespace}" --dry-run=client -o yaml | kubectl apply
 kubectl label namespace "${namespace}" app.kubernetes.io/managed-by=Helm --overwrite
 kubectl annotate namespace "${namespace}" meta.helm.sh/release-name=optio --overwrite
 kubectl annotate namespace "${namespace}" meta.helm.sh/release-namespace="${namespace}" --overwrite
+kubectl apply -f "${repo_root}/deploy/limitrange.yaml"
 
 sed "s/__LETSENCRYPT_EMAIL__/${LETSENCRYPT_EMAIL}/g" "${repo_root}/deploy/cluster-issuer.yaml" \
   | kubectl apply -f -
