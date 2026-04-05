@@ -36,4 +36,4 @@ jobs:
           # Contract: fork overlay keeps resources in optio namespace.
           DEFAULT_RENDER="$(mktemp)"
           helm template optio ./helm/optio "${HELM_ARGS[@]}" > "${DEFAULT_RENDER}"
-          rg -q "namespace: optio" "${DEFAULT_RENDER}"
+          grep -q "namespace: optio" "${DEFAULT_RENDER}"
