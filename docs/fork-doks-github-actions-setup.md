@@ -127,14 +127,18 @@ AUTH_GITHUB_CLIENT_SECRET
 If GitHub App integration is enabled, also add:
 
 ```text
-GITHUB_APP_ID
-GITHUB_APP_CLIENT_ID
-GITHUB_APP_CLIENT_SECRET
-GITHUB_APP_INSTALLATION_ID
-GITHUB_APP_PRIVATE_KEY
-GITHUB_APP_BOT_NAME
-GITHUB_APP_BOT_EMAIL
+OPTIO_GITHUB_APP_ID
+OPTIO_GITHUB_APP_CLIENT_ID
+OPTIO_GITHUB_APP_CLIENT_SECRET
+OPTIO_GITHUB_APP_INSTALLATION_ID
+OPTIO_GITHUB_APP_PRIVATE_KEY
+OPTIO_GITHUB_APP_BOT_NAME
+OPTIO_GITHUB_APP_BOT_EMAIL
 ```
+
+GitHub Actions secret names cannot start with `GITHUB_`, so the fork deploy
+workflow reads GitHub App credentials from the `OPTIO_GITHUB_APP_*` secrets and
+maps them to `GITHUB_APP_*` runtime environment variables during deploy.
 
 ## Step 8: Validate Fork Deploy Contract
 
