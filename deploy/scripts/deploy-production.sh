@@ -98,6 +98,7 @@ helm_image_args=(
   --set-string web.image.repository="${image_base}/optio-web"
   --set-string optio.image.repository="${image_base}/optio-optio"
   --set-string agent.image.repository="${image_base}/optio-agent-base"
+  --set-string agent.image.prefix="${image_base}/optio-agent-"
   --set-string api.image.tag="${RELEASE_TAG}"
   --set-string web.image.tag="${RELEASE_TAG}"
   --set-string optio.image.tag="${RELEASE_TAG}"
