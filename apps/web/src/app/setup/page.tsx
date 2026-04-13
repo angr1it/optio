@@ -25,7 +25,7 @@ import {
 
 const STEPS = [
   { id: "welcome", label: "Welcome", icon: Zap },
-  { id: "github", label: "GitHub", icon: Github },
+  { id: "git", label: "Git Provider", icon: GitBranch },
   { id: "agents", label: "Agent Keys", icon: Key },
   { id: "repos", label: "Repositories", icon: GitBranch },
   { id: "prompt", label: "Prompt", icon: FileText },
@@ -49,12 +49,19 @@ export default function SetupPage() {
   // Step 1: Runtime health
   const [runtimeHealthy, setRuntimeHealthy] = useState<boolean | null>(null);
 
-  // Step 2: GitHub token
+  // Step 2: Git provider
+  const [githubEnabled, setGithubEnabled] = useState(true);
+  const [gitlabEnabled, setGitlabEnabled] = useState(false);
   const [githubToken, setGithubToken] = useState("");
   const [githubUser, setGithubUser] = useState<{ login: string; name: string } | null>(null);
   const [githubValidated, setGithubValidated] = useState(false);
   const [githubError, setGithubError] = useState("");
   const [githubAppConfigured, setGithubAppConfigured] = useState(false);
+  const [gitlabToken, setGitlabToken] = useState("");
+  const [gitlabHost, setGitlabHost] = useState("gitlab.com");
+  const [gitlabUser, setGitlabUser] = useState<{ login: string; name: string } | null>(null);
+  const [gitlabValidated, setGitlabValidated] = useState(false);
+  const [gitlabError, setGitlabError] = useState("");
 
   // Step 3: Agent keys
   const [anthropicKey, setAnthropicKey] = useState("");
@@ -79,6 +86,14 @@ export default function SetupPage() {
   const [copilotToken, setCopilotToken] = useState("");
   const [copilotValidated, setCopilotValidated] = useState(false);
   const [copilotError, setCopilotError] = useState("");
+
+  // Step 3b: Gemini
+  const [geminiAuthMode, setGeminiAuthMode] = useState<"api-key" | "vertex-ai">("api-key");
+  const [geminiKey, setGeminiKey] = useState("");
+  const [geminiValidated, setGeminiValidated] = useState(false);
+  const [geminiError, setGeminiError] = useState("");
+  const [geminiVertexProject, setGeminiVertexProject] = useState("");
+  const [geminiVertexLocation, setGeminiVertexLocation] = useState("us-central1");
 
   // Step 4: Repos
   const [repos, setRepos] = useState<RepoEntry[]>([]);
@@ -133,15 +148,22 @@ export default function SetupPage() {
   // Fetch suggested repos when reaching the repos step
   useEffect(() => {
     if (currentStep?.id === "repos" && suggestedRepos.length === 0) {
-      // When GitHub App is configured, fetch repos server-side (no PAT needed).
-      // When using a PAT, pass it for the user-scoped repo listing.
-      if (githubAppConfigured || githubToken) {
-        setSuggestedLoading(true);
-        api
-          .listUserRepos(githubToken || "")
-          .then((res) => setSuggestedRepos(res.repos.slice(0, 8)))
+      setSuggestedLoading(true);
+      const fetches: Promise<{ repos: any[] }>[] = [];
+      if (githubAppConfigured || (githubEnabled && githubToken))
+        fetches.push(api.listUserRepos(githubToken || ""));
+      if (gitlabEnabled && gitlabToken)
+        fetches.push(api.listGitlabRepos(gitlabToken, gitlabHost || undefined));
+      if (fetches.length > 0) {
+        Promise.all(fetches)
+          .then((results) => {
+            const all = results.flatMap((r) => r.repos);
+            setSuggestedRepos(all.slice(0, 8));
+          })
           .catch(() => {})
           .finally(() => setSuggestedLoading(false));
+      } else {
+        setSuggestedLoading(false);
       }
     }
   }, [step]);
@@ -167,6 +189,9 @@ export default function SetupPage() {
 
   const copilotReady = copilotValidated;
 
+  const geminiReady =
+    geminiAuthMode === "vertex-ai" ? geminiVertexProject.trim().length > 0 : geminiValidated;
+
   const currentStep = STEPS[step];
 
   const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -188,6 +213,25 @@ export default function SetupPage() {
       }
     } catch (err) {
       setGithubError(err instanceof Error ? err.message : "Validation failed");
+    }
+    setLoading(false);
+  };
+
+  const validateGitlab = async (tokenOverride?: string) => {
+    const token = tokenOverride ?? gitlabToken;
+    if (!token.trim()) return;
+    setLoading(true);
+    setGitlabError("");
+    try {
+      const res = await api.validateGitlabToken(token, gitlabHost || undefined);
+      if (res.valid && res.user) {
+        setGitlabUser(res.user);
+        setGitlabValidated(true);
+      } else {
+        setGitlabError(res.error ?? "Invalid token");
+      }
+    } catch (err) {
+      setGitlabError(err instanceof Error ? err.message : "Validation failed");
     }
     setLoading(false);
   };
@@ -242,6 +286,24 @@ export default function SetupPage() {
       }
     } catch (err) {
       setCopilotError(err instanceof Error ? err.message : "Validation failed");
+    }
+    setLoading(false);
+  };
+
+  const validateGemini = async (keyOverride?: string) => {
+    const key = keyOverride ?? geminiKey;
+    if (!key.trim()) return;
+    setLoading(true);
+    setGeminiError("");
+    try {
+      const res = await api.validateGeminiKey(key);
+      if (res.valid) {
+        setGeminiValidated(true);
+      } else {
+        setGeminiError(res.error ?? "Invalid API key");
+      }
+    } catch (err) {
+      setGeminiError(err instanceof Error ? err.message : "Validation failed");
     }
     setLoading(false);
   };
@@ -304,13 +366,21 @@ export default function SetupPage() {
   }, [repos]);
 
   // Save step: store all secrets and config
-  const saveGithubStep = async () => {
+  const saveGitStep = async () => {
     setLoading(true);
     try {
-      await api.createSecret({ name: "GITHUB_TOKEN", value: githubToken });
+      if (githubEnabled && githubToken.trim() && githubValidated) {
+        await api.createSecret({ name: "GITHUB_TOKEN", value: githubToken });
+      }
+      if (gitlabEnabled && gitlabToken.trim() && gitlabValidated) {
+        await api.createSecret({ name: "GITLAB_TOKEN", value: gitlabToken });
+        if (gitlabHost && gitlabHost !== "gitlab.com") {
+          await api.createSecret({ name: "GITLAB_HOST", value: gitlabHost });
+        }
+      }
       goNext();
     } catch (err) {
-      toast.error("Failed to save GitHub token");
+      toast.error("Failed to save git provider tokens");
     }
     setLoading(false);
   };
@@ -339,6 +409,20 @@ export default function SetupPage() {
       if (copilotToken.trim() && copilotValidated) {
         await api.createSecret({ name: "COPILOT_GITHUB_TOKEN", value: copilotToken });
       }
+      // Save Gemini credentials
+      if (geminiAuthMode === "vertex-ai" && geminiVertexProject.trim()) {
+        await api.createSecret({ name: "GEMINI_AUTH_MODE", value: "vertex-ai" });
+        await api.createSecret({ name: "GOOGLE_CLOUD_PROJECT", value: geminiVertexProject.trim() });
+        if (geminiVertexLocation.trim()) {
+          await api.createSecret({
+            name: "GOOGLE_CLOUD_LOCATION",
+            value: geminiVertexLocation.trim(),
+          });
+        }
+      } else if (geminiKey.trim() && geminiValidated) {
+        await api.createSecret({ name: "GEMINI_AUTH_MODE", value: "api-key" });
+        await api.createSecret({ name: "GEMINI_API_KEY", value: geminiKey });
+      }
       goNext();
     } catch (err) {
       toast.error("Failed to save API keys");
@@ -360,8 +444,10 @@ export default function SetupPage() {
               isPrivate: repo.isPrivate,
             });
           } catch (err) {
-            // Repo already exists from a previous setup — safe to skip
-            if (err instanceof Error && err.message.includes("already been added")) continue;
+            // Skip 409 Conflict (repo already exists) — this is expected on re-runs
+            if (err instanceof Error && err.message.includes("already been added")) {
+              continue;
+            }
             throw err;
           }
         }
@@ -498,78 +584,182 @@ export default function SetupPage() {
             </div>
           )}
 
-          {/* GitHub Token */}
-          {currentStep.id === "github" && (
+          {/* Git Provider */}
+          {currentStep.id === "git" && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <Github className="w-6 h-6 text-text" />
-                <h2 className="text-lg font-bold">GitHub Access</h2>
+                <GitBranch className="w-6 h-6 text-text" />
+                <h2 className="text-lg font-bold">Git Provider</h2>
+              </div>
+              <p className="text-text-muted text-sm">
+                Agents need access to your git platform to clone repos, create branches, and open
+                pull/merge requests. Choose your provider and add a token.
+              </p>
+
+              {/* Provider selector (both can be enabled) */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setGithubEnabled((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm border transition-colors",
+                    githubEnabled
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-text-muted hover:bg-bg-hover",
+                  )}
+                >
+                  <Github className="w-4 h-4" />
+                  GitHub
+                </button>
+                <button
+                  onClick={() => setGitlabEnabled((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm border transition-colors",
+                    gitlabEnabled
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-text-muted hover:bg-bg-hover",
+                  )}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 0 1-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 0 1 4.82 2a.43.43 0 0 1 .58 0 .42.42 0 0 1 .11.18l2.44 7.49h8.1l2.44-7.51A.42.42 0 0 1 18.6 2a.43.43 0 0 1 .58 0 .42.42 0 0 1 .11.18l2.44 7.51L23 13.45a.84.84 0 0 1-.35.94z" />
+                  </svg>
+                  GitLab
+                </button>
               </div>
 
-              {githubAppConfigured ? (
+              {/* GitHub form */}
+              {githubEnabled && (
                 <>
-                  <div className="flex items-center gap-2 text-success text-sm p-3 rounded-md bg-success/10">
-                    <CheckCircle className="w-4 h-4" />
-                    GitHub App is configured — no personal access token needed.
-                  </div>
-                  <p className="text-text-muted text-sm">
-                    Optio will use the installed GitHub App to clone repos, create branches, and
-                    open pull requests.
-                  </p>
+                  {githubAppConfigured ? (
+                    <>
+                      <div className="flex items-center gap-2 text-success text-sm p-3 rounded-md bg-success/10">
+                        <CheckCircle className="w-4 h-4" />
+                        GitHub App is configured — no personal access token needed.
+                      </div>
+                      <p className="text-text-muted text-sm">
+                        Optio will use the installed GitHub App to clone repos, create branches, and
+                        open pull requests.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <a
+                        href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=Optio+Agent"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-bg-hover text-text text-sm hover:bg-border transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Create GitHub Personal Access Token
+                      </a>
+                      <div>
+                        <label className="block text-sm text-text-muted mb-1.5">GitHub Token</label>
+                        <input
+                          type="password"
+                          value={githubToken}
+                          onChange={(e) => {
+                            setGithubToken(e.target.value);
+                            setGithubValidated(false);
+                            setGithubError("");
+                          }}
+                          onPaste={(e) => {
+                            e.preventDefault();
+                            const pasted = e.clipboardData.getData("text").trim();
+                            if (pasted) {
+                              setGithubToken(pasted);
+                              setGithubValidated(false);
+                              setGithubError("");
+                              setTimeout(() => validateGithub(pasted), 50);
+                            }
+                          }}
+                          placeholder="ghp_..."
+                          className="w-full px-3 py-2 rounded-md bg-bg border border-border text-sm focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      {githubError && (
+                        <div className="flex items-center gap-2 text-error text-sm">
+                          <AlertCircle className="w-4 h-4" />
+                          {githubError}
+                        </div>
+                      )}
+                      {githubValidated && githubUser && (
+                        <div className="flex items-center gap-2 text-success text-sm p-2 rounded-md bg-success/10">
+                          <CheckCircle className="w-4 h-4" />
+                          Authenticated as <strong>{githubUser.login}</strong>
+                          {githubUser.name && (
+                            <span className="text-text-muted">({githubUser.name})</span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </>
-              ) : (
+              )}
+
+              {/* GitLab form */}
+              {gitlabEnabled && (
                 <>
-                  <p className="text-text-muted text-sm">
-                    Agents need a GitHub token to clone repos, create branches, and open pull
-                    requests. Create a token with{" "}
-                    <code className="px-1 py-0.5 bg-bg rounded text-xs">repo</code> scope, then
-                    paste it below.
-                  </p>
                   <a
-                    href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=Optio+Agent"
+                    href={`https://${gitlabHost || "gitlab.com"}/-/user_settings/personal_access_tokens?name=Optio+Agent&scopes=api,read_user,read_repository,write_repository`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-bg-hover text-text text-sm hover:bg-border transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    Create GitHub Personal Access Token
+                    Create GitLab Personal Access Token
                   </a>
                   <div>
-                    <label className="block text-sm text-text-muted mb-1.5">GitHub Token</label>
+                    <label className="block text-sm text-text-muted mb-1.5">
+                      GitLab Host{" "}
+                      <span className="text-text-muted/60">(leave default for gitlab.com)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={gitlabHost}
+                      onChange={(e) => {
+                        setGitlabHost(e.target.value);
+                        setGitlabValidated(false);
+                        setGitlabError("");
+                      }}
+                      placeholder="gitlab.com"
+                      className="w-full px-3 py-2 rounded-md bg-bg border border-border text-sm focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-text-muted mb-1.5">GitLab Token</label>
                     <input
                       type="password"
-                      value={githubToken}
+                      value={gitlabToken}
                       onChange={(e) => {
-                        setGithubToken(e.target.value);
-                        setGithubValidated(false);
-                        setGithubError("");
+                        setGitlabToken(e.target.value);
+                        setGitlabValidated(false);
+                        setGitlabError("");
                       }}
                       onPaste={(e) => {
                         e.preventDefault();
                         const pasted = e.clipboardData.getData("text").trim();
                         if (pasted) {
-                          setGithubToken(pasted);
-                          setGithubValidated(false);
-                          setGithubError("");
-                          setTimeout(() => validateGithub(pasted), 50);
+                          setGitlabToken(pasted);
+                          setGitlabValidated(false);
+                          setGitlabError("");
+                          setTimeout(() => validateGitlab(pasted), 50);
                         }
                       }}
-                      placeholder="ghp_..."
+                      placeholder="glpat-..."
                       className="w-full px-3 py-2 rounded-md bg-bg border border-border text-sm focus:outline-none focus:border-primary"
                     />
                   </div>
-                  {githubError && (
+                  {gitlabError && (
                     <div className="flex items-center gap-2 text-error text-sm">
                       <AlertCircle className="w-4 h-4" />
-                      {githubError}
+                      {gitlabError}
                     </div>
                   )}
-                  {githubValidated && githubUser && (
+                  {gitlabValidated && gitlabUser && (
                     <div className="flex items-center gap-2 text-success text-sm p-2 rounded-md bg-success/10">
                       <CheckCircle className="w-4 h-4" />
-                      Authenticated as <strong>{githubUser.login}</strong>
-                      {githubUser.name && (
-                        <span className="text-text-muted">({githubUser.name})</span>
+                      Authenticated as <strong>{gitlabUser.login}</strong>
+                      {gitlabUser.name && (
+                        <span className="text-text-muted">({gitlabUser.name})</span>
                       )}
                     </div>
                   )}
@@ -584,18 +774,32 @@ export default function SetupPage() {
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <div className="flex gap-2">
-                  {!githubAppConfigured && !githubValidated && (
+                  {githubEnabled && !githubAppConfigured && !githubValidated && (
                     <button
                       onClick={() => validateGithub()}
                       disabled={loading || !githubToken.trim()}
                       className="flex items-center gap-2 px-4 py-2 rounded-md bg-bg-hover text-text text-sm hover:bg-border disabled:opacity-50"
                     >
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Validate"}
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Validate GitHub"}
+                    </button>
+                  )}
+                  {gitlabEnabled && !gitlabValidated && (
+                    <button
+                      onClick={() => validateGitlab()}
+                      disabled={loading || !gitlabToken.trim()}
+                      className="flex items-center gap-2 px-4 py-2 rounded-md bg-bg-hover text-text text-sm hover:bg-border disabled:opacity-50"
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Validate GitLab"}
                     </button>
                   )}
                   <button
-                    onClick={githubAppConfigured ? goNext : saveGithubStep}
-                    disabled={!githubAppConfigured && (!githubValidated || loading)}
+                    onClick={saveGitStep}
+                    disabled={
+                      loading ||
+                      (!githubEnabled && !gitlabEnabled) ||
+                      (githubEnabled && !githubAppConfigured && !githubValidated) ||
+                      (gitlabEnabled && !gitlabValidated)
+                    }
                     className="flex items-center gap-2 px-5 py-2 rounded-md bg-primary text-white text-sm hover:bg-primary-hover disabled:opacity-50"
                   >
                     {loading ? (
@@ -663,18 +867,17 @@ export default function SetupPage() {
                               <Loader2 className="w-3 h-3 animate-spin" /> Checking for existing
                               token...
                             </span>
+                          ) : oauthExpired ? (
+                            <span className="text-xs text-error flex items-center gap-2">
+                              <AlertTriangle className="w-3 h-3" /> OAuth token has expired — paste
+                              a new one below
+                            </span>
                           ) : oauthTokenDetected ? (
                             <span className="text-xs text-success flex items-center gap-1">
                               <CheckCircle className="w-3 h-3" /> Claude subscription token detected
                             </span>
                           ) : (
                             <>
-                              {oauthExpired && (
-                                <span className="text-xs text-error flex items-center gap-2">
-                                  <AlertTriangle className="w-3 h-3" /> OAuth token has expired —
-                                  paste a new one below
-                                </span>
-                              )}
                               <div>
                                 <p className="text-xs text-text-muted mb-1.5">
                                   Run this in a terminal to copy your token:
@@ -1022,6 +1225,135 @@ export default function SetupPage() {
                 </div>
               </div>
 
+              {/* Gemini */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-text">
+                    Gemini (Google) <span className="text-text-muted font-normal">— optional</span>
+                  </span>
+                  {geminiReady && (
+                    <span className="text-success text-xs flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Ready
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-2 cursor-pointer p-2 rounded-md hover:bg-bg-hover">
+                      <input
+                        type="radio"
+                        name="gemini-auth-mode"
+                        checked={geminiAuthMode === "api-key"}
+                        onChange={() => setGeminiAuthMode("api-key")}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">
+                          Use Gemini API key{" "}
+                          <span className="text-text-muted font-normal">— pay-per-use</span>
+                        </span>
+                        <p className="text-xs text-text-muted mt-0.5">
+                          Get your API key from{" "}
+                          <a
+                            href="https://aistudio.google.com/apikey"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            Google AI Studio
+                          </a>
+                          .
+                        </p>
+                        {geminiAuthMode === "api-key" && (
+                          <div className="mt-2 space-y-2">
+                            <div className="flex gap-2">
+                              <input
+                                type="password"
+                                value={geminiKey}
+                                onChange={(e) => {
+                                  setGeminiKey(e.target.value);
+                                  setGeminiValidated(false);
+                                  setGeminiError("");
+                                }}
+                                onPaste={(e) => {
+                                  const pasted = e.clipboardData.getData("text");
+                                  if (pasted) {
+                                    setGeminiKey(pasted);
+                                    setGeminiValidated(false);
+                                    setGeminiError("");
+                                    setTimeout(() => validateGemini(pasted), 100);
+                                  }
+                                }}
+                                placeholder="AIza..."
+                                className="flex-1 px-3 py-2 rounded-md bg-bg-card border border-border text-sm focus:outline-none focus:border-primary"
+                              />
+                              <button
+                                onClick={() => validateGemini()}
+                                disabled={loading || !geminiKey.trim() || geminiValidated}
+                                className="px-3 py-2 rounded-md bg-bg-hover text-sm hover:bg-border disabled:opacity-50"
+                              >
+                                {loading ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  "Validate"
+                                )}
+                              </button>
+                            </div>
+                            {geminiError && (
+                              <p className="text-error text-xs flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" /> {geminiError}
+                              </p>
+                            )}
+                            {geminiValidated && (
+                              <p className="text-success text-xs flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" /> API key valid
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-2 cursor-pointer p-2 rounded-md hover:bg-bg-hover">
+                      <input
+                        type="radio"
+                        name="gemini-auth-mode"
+                        checked={geminiAuthMode === "vertex-ai"}
+                        onChange={() => setGeminiAuthMode("vertex-ai")}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">
+                          Use Vertex AI (ADC){" "}
+                          <span className="text-text-muted font-normal">— GCP workloads</span>
+                        </span>
+                        <p className="text-xs text-text-muted mt-0.5">
+                          Uses Application Default Credentials. Requires a service account with
+                          Vertex AI permissions.
+                        </p>
+                        {geminiAuthMode === "vertex-ai" && (
+                          <div className="mt-2 space-y-2">
+                            <input
+                              type="text"
+                              value={geminiVertexProject}
+                              onChange={(e) => setGeminiVertexProject(e.target.value)}
+                              placeholder="GCP Project ID"
+                              className="w-full px-3 py-2 rounded-md bg-bg-card border border-border text-sm focus:outline-none focus:border-primary"
+                            />
+                            <input
+                              type="text"
+                              value={geminiVertexLocation}
+                              onChange={(e) => setGeminiVertexLocation(e.target.value)}
+                              placeholder="Location (e.g. us-central1)"
+                              className="w-full px-3 py-2 rounded-md bg-bg-card border border-border text-sm focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <button
                   onClick={goBack}
@@ -1031,7 +1363,9 @@ export default function SetupPage() {
                 </button>
                 <button
                   onClick={saveAgentKeysStep}
-                  disabled={(!claudeReady && !codexReady && !copilotReady) || loading}
+                  disabled={
+                    (!claudeReady && !codexReady && !copilotReady && !geminiReady) || loading
+                  }
                   className="flex items-center gap-2 px-5 py-2 rounded-md bg-primary text-white text-sm hover:bg-primary-hover disabled:opacity-50"
                 >
                   {loading ? (
@@ -1462,6 +1796,14 @@ export default function SetupPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle className="w-4 h-4 text-success" />
                     <span>OpenAI Codex: ready</span>
+                  </div>
+                )}
+                {geminiReady && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-success" />
+                    <span>
+                      Google Gemini: {geminiAuthMode === "vertex-ai" ? "Vertex AI" : "API key"}
+                    </span>
                   </div>
                 )}
                 {repos.filter((r) => r.validated).length > 0 && (
