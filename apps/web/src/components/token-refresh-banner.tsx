@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 const COPY_COMMAND = `security find-generic-password -s "Claude Code-credentials" -w | python3 -c "import sys,json; print(json.load(sys.stdin)['claudeAiOauth']['accessToken'])" | pbcopy`;
 
-export function TokenRefreshBanner() {
+export function TokenRefreshBanner({ onSaved }: { onSaved?: () => void | Promise<void> } = {}) {
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -15,8 +15,19 @@ export function TokenRefreshBanner() {
     if (!token.trim()) return;
     setSaving(true);
     try {
-      await api.createSecret({ name: "CLAUDE_CODE_OAUTH_TOKEN", value: token.trim() });
-      toast.success("Token updated — tasks will use it on next run");
+      const result = await api.createSecret({
+        name: "CLAUDE_CODE_OAUTH_TOKEN",
+        value: token.trim(),
+      });
+      if (result.validation && !result.validation.valid) {
+        toast.error(`Token saved but validation failed: ${result.validation.error}`);
+      } else {
+        toast.success("Token updated — tasks will use it on next run");
+        // Directly trigger a usage refetch so the banner dismisses without
+        // waiting on the WebSocket event or the 5-minute poll. If validation
+        // failed we leave the banner up so the user can try again.
+        await onSaved?.();
+      }
       setToken("");
     } catch {
       toast.error("Failed to save token");
@@ -59,6 +70,79 @@ export function TokenRefreshBanner() {
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder="Paste token here"
+          className="flex-1 px-3 py-1.5 rounded-md bg-bg border border-border text-sm focus:outline-none focus:border-primary font-mono"
+        />
+        <button
+          onClick={handleSave}
+          disabled={!token.trim() || saving}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {saving ? (
+            "Saving..."
+          ) : token.trim() ? (
+            <>
+              <Check className="w-3 h-3" />
+              Save Token
+            </>
+          ) : (
+            "Save Token"
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function GitHubTokenBanner({ onSaved }: { onSaved?: () => void | Promise<void> } = {}) {
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!token.trim()) return;
+    setSaving(true);
+    try {
+      const result = await api.createSecret({ name: "GITHUB_TOKEN", value: token.trim() });
+      const validation = (result as any).validation;
+      if (validation && !validation.valid) {
+        toast.error(`Token saved but validation failed: ${validation.error}`);
+      } else {
+        toast.success("GitHub token updated");
+        // Directly trigger a usage refetch so the banner dismisses without
+        // waiting on the WebSocket event or the 5-minute poll. If validation
+        // failed we leave the banner up so the user can try again.
+        await onSaved?.();
+      }
+      setToken("");
+    } catch {
+      toast.error("Failed to save token");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-error/30 bg-error/5 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="w-4 h-4 text-error shrink-0" />
+        <span className="text-sm font-medium text-text-heading">GitHub token invalid</span>
+        <span className="text-xs text-text-muted">— ticket sync and PR watching are failing</span>
+      </div>
+
+      <a
+        href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=Optio+Agent"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-bg-hover text-text text-sm hover:bg-border transition-colors"
+      >
+        <ExternalLink className="w-4 h-4" />
+        Create GitHub Personal Access Token
+      </a>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="password"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="Paste GitHub token here"
           className="flex-1 px-3 py-1.5 rounded-md bg-bg border border-border text-sm focus:outline-none focus:border-primary font-mono"
         />
         <button

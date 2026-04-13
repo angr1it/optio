@@ -42,6 +42,20 @@ export const api = {
     return request<{ tasks: any[] }>(`/api/tasks${query ? `?${query}` : ""}`);
   },
 
+  getTaskStats: () =>
+    request<{
+      stats: {
+        total: number;
+        queued: number;
+        running: number;
+        ci: number;
+        review: number;
+        needsAttention: number;
+        failed: number;
+        completed: number;
+      };
+    }>("/api/tasks/stats"),
+
   searchTasks: (params?: {
     q?: string;
     state?: string;
@@ -69,9 +83,17 @@ export const api = {
   },
 
   getTask: (id: string) =>
-    request<{ task: any; pendingReason?: string | null; pipelineProgress?: any | null }>(
-      `/api/tasks/${id}`,
-    ),
+    request<{
+      task: any;
+      pendingReason?: string | null;
+      pipelineProgress?: any | null;
+      stallInfo?: {
+        isStalled: boolean;
+        silentForMs: number;
+        thresholdMs: number;
+        lastLogSummary?: string;
+      } | null;
+    }>(`/api/tasks/${id}`),
 
   createTask: (data: {
     title: string;
@@ -157,6 +179,15 @@ export const api = {
 
   getTaskActivity: (id: string) => request<{ activity: any[] }>(`/api/tasks/${id}/activity`),
 
+  // Task Messages (mid-task user → agent messaging)
+  sendTaskMessage: (id: string, content: string, mode: "soft" | "interrupt" = "soft") =>
+    request<{ message: any }>(`/api/tasks/${id}/message`, {
+      method: "POST",
+      body: JSON.stringify({ content, mode }),
+    }),
+
+  getTaskMessages: (id: string) => request<{ messages: any[] }>(`/api/tasks/${id}/messages`),
+
   // Secrets
   listSecrets: (scope?: string) => {
     const qs = scope ? `?scope=${scope}` : "";
@@ -164,10 +195,13 @@ export const api = {
   },
 
   createSecret: (data: { name: string; value: string; scope?: string }) =>
-    request<{ name: string; scope: string }>("/api/secrets", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    request<{ name: string; scope: string; validation?: { valid: boolean; error?: string } }>(
+      "/api/secrets",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    ),
 
   deleteSecret: (name: string, scope?: string) => {
     const qs = scope ? `?scope=${scope}` : "";
@@ -326,6 +360,29 @@ export const api = {
       { method: "POST", body: JSON.stringify({ token }) },
     ),
 
+  validateGitlabToken: (token: string, host?: string) =>
+    request<{ valid: boolean; error?: string; user?: { login: string; name: string } }>(
+      "/api/setup/validate/gitlab-token",
+      { method: "POST", body: JSON.stringify({ token, host }) },
+    ),
+
+  listGitlabRepos: (token: string, host?: string) =>
+    request<{
+      repos: Array<{
+        fullName: string;
+        cloneUrl: string;
+        defaultBranch: string;
+        isPrivate: boolean;
+        description: string;
+        language: string;
+        pushedAt: string;
+      }>;
+      error?: string;
+    }>("/api/setup/repos/gitlab", {
+      method: "POST",
+      body: JSON.stringify({ token, host }),
+    }),
+
   validateAnthropicKey: (key: string) =>
     request<{ valid: boolean; error?: string }>("/api/setup/validate/anthropic-key", {
       method: "POST",
@@ -343,6 +400,12 @@ export const api = {
       "/api/setup/validate/copilot-token",
       { method: "POST", body: JSON.stringify({ token }) },
     ),
+
+  validateGeminiKey: (key: string) =>
+    request<{ valid: boolean; error?: string }>("/api/setup/validate/gemini-key", {
+      method: "POST",
+      body: JSON.stringify({ key }),
+    }),
 
   validateRepo: (repoUrl: string, token?: string) =>
     request<{
@@ -368,6 +431,8 @@ export const api = {
     request<{
       usage: {
         available: boolean;
+        hasRecentAuthFailure?: boolean;
+        authFailures?: { claude: boolean; github: boolean };
         fiveHour?: { utilization: number | null; resetsAt: string | null };
         sevenDay?: { utilization: number | null; resetsAt: string | null };
         sevenDaySonnet?: { utilization: number | null; resetsAt: string | null };
@@ -505,6 +570,115 @@ export const api = {
     }>(`/api/analytics/costs${query ? `?${query}` : ""}`);
   },
 
+  getPerformanceAnalytics: (params?: { days?: number; repoUrl?: string; agentType?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set("days", String(params.days));
+    if (params?.repoUrl) qs.set("repoUrl", params.repoUrl);
+    if (params?.agentType) qs.set("agentType", params.agentType);
+    const query = qs.toString();
+    return request<{
+      durations: {
+        avgWallClock: number;
+        p50WallClock: number;
+        p95WallClock: number;
+        avgExecution: number;
+        p50Execution: number;
+        p95Execution: number;
+        avgQueueWait: number;
+        taskCount: number;
+      };
+      successRate: number;
+      successRateTrend: number;
+      tasksPerDay: Array<{
+        date: string;
+        total: number;
+        succeeded: number;
+        failed: number;
+      }>;
+    }>(`/api/analytics/performance${query ? `?${query}` : ""}`);
+  },
+
+  getAgentAnalytics: (params?: { days?: number; repoUrl?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set("days", String(params.days));
+    if (params?.repoUrl) qs.set("repoUrl", params.repoUrl);
+    const query = qs.toString();
+    return request<{
+      agents: Array<{
+        agentType: string;
+        taskCount: number;
+        successRate: number;
+        avgDuration: number;
+        avgCost: string;
+        avgRetries: number;
+        models: Array<{
+          model: string;
+          taskCount: number;
+          avgCost: string;
+        }>;
+      }>;
+    }>(`/api/analytics/agents${query ? `?${query}` : ""}`);
+  },
+
+  getFailureAnalytics: (params?: { days?: number; repoUrl?: string; agentType?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set("days", String(params.days));
+    if (params?.repoUrl) qs.set("repoUrl", params.repoUrl);
+    if (params?.agentType) qs.set("agentType", params.agentType);
+    const query = qs.toString();
+    return request<{
+      errorMessages: Array<{ message: string; count: number }>;
+      failureByRepo: Array<{
+        repoUrl: string;
+        total: number;
+        failed: number;
+        failureRate: number;
+      }>;
+      failureByAgent: Array<{
+        agentType: string;
+        total: number;
+        failed: number;
+        failureRate: number;
+      }>;
+      failureByModel: Array<{
+        model: string;
+        total: number;
+        failed: number;
+        failureRate: number;
+      }>;
+      retrySuccessRate: number;
+      retriedCount: number;
+      retrySucceededCount: number;
+      stallCount: number;
+      stallRecoveryRate: number;
+    }>(`/api/analytics/failures${query ? `?${query}` : ""}`);
+  },
+
+  getPrAnalytics: (params?: { days?: number; repoUrl?: string; agentType?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.days) qs.set("days", String(params.days));
+    if (params?.repoUrl) qs.set("repoUrl", params.repoUrl);
+    if (params?.agentType) qs.set("agentType", params.agentType);
+    const query = qs.toString();
+    return request<{
+      totalPrs: number;
+      merged: number;
+      closed: number;
+      open: number;
+      ciPassRate: number;
+      reviewApprovalRate: number;
+      autoMergeRate: number;
+      avgMergeTime: number;
+      mergeCount: number;
+      funnel: {
+        prOpened: number;
+        ciPassed: number;
+        reviewApproved: number;
+        merged: number;
+      };
+    }>(`/api/analytics/prs${query ? `?${query}` : ""}`);
+  },
+
   assignIssue: (data: {
     issueNumber: number;
     repoId: string;
@@ -545,54 +719,6 @@ export const api = {
 
   logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
 
-  // Task Templates
-  listTaskTemplates: (repoUrl?: string) => {
-    const qs = repoUrl ? `?repoUrl=${encodeURIComponent(repoUrl)}` : "";
-    return request<{ templates: any[] }>(`/api/task-templates${qs}`);
-  },
-
-  getTaskTemplate: (id: string) => request<{ template: any }>(`/api/task-templates/${id}`),
-
-  createTaskTemplate: (data: {
-    name: string;
-    prompt: string;
-    repoUrl?: string;
-    agentType?: string;
-    priority?: number;
-    metadata?: Record<string, unknown>;
-  }) =>
-    request<{ template: any }>("/api/task-templates", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
-  updateTaskTemplate: (id: string, data: Record<string, unknown>) =>
-    request<{ template: any }>(`/api/task-templates/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    }),
-
-  deleteTaskTemplate: (id: string) =>
-    request<void>(`/api/task-templates/${id}`, { method: "DELETE" }),
-
-  createTaskFromTemplate: (
-    templateId: string,
-    data: {
-      title: string;
-      repoUrl?: string;
-      repoBranch?: string;
-      prompt?: string;
-      agentType?: string;
-      priority?: number;
-      maxRetries?: number;
-      metadata?: Record<string, unknown>;
-    },
-  ) =>
-    request<{ task: any }>(`/api/tasks/from-template/${templateId}`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
   // Interactive Sessions
   listSessions: (params?: {
     repoUrl?: string;
@@ -629,109 +755,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-
-  // Schedules
-  listSchedules: () =>
-    request<{
-      schedules: Array<{
-        id: string;
-        name: string;
-        description: string | null;
-        cronExpression: string;
-        enabled: boolean;
-        taskConfig: {
-          title: string;
-          prompt: string;
-          repoUrl: string;
-          repoBranch?: string;
-          agentType: string;
-          maxRetries?: number;
-          priority?: number;
-        };
-        lastRunAt: string | null;
-        nextRunAt: string | null;
-        createdAt: string;
-        updatedAt: string;
-      }>;
-    }>("/api/schedules"),
-
-  getSchedule: (id: string) =>
-    request<{
-      schedule: {
-        id: string;
-        name: string;
-        description: string | null;
-        cronExpression: string;
-        enabled: boolean;
-        taskConfig: {
-          title: string;
-          prompt: string;
-          repoUrl: string;
-          repoBranch?: string;
-          agentType: string;
-          maxRetries?: number;
-          priority?: number;
-        };
-        lastRunAt: string | null;
-        nextRunAt: string | null;
-        createdAt: string;
-        updatedAt: string;
-      };
-    }>(`/api/schedules/${id}`),
-
-  createSchedule: (data: {
-    name: string;
-    description?: string;
-    cronExpression: string;
-    enabled?: boolean;
-    taskConfig: {
-      title: string;
-      prompt: string;
-      repoUrl: string;
-      repoBranch?: string;
-      agentType: string;
-      maxRetries?: number;
-      priority?: number;
-    };
-  }) =>
-    request<{ schedule: any }>("/api/schedules", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
-  updateSchedule: (id: string, data: Record<string, unknown>) =>
-    request<{ schedule: any }>(`/api/schedules/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    }),
-
-  deleteSchedule: (id: string) => request<void>(`/api/schedules/${id}`, { method: "DELETE" }),
-
-  triggerSchedule: (id: string) =>
-    request<{ task: any }>(`/api/schedules/${id}/trigger`, { method: "POST" }),
-
-  getScheduleRuns: (id: string, limit?: number) => {
-    const qs = limit ? `?limit=${limit}` : "";
-    return request<{
-      runs: Array<{
-        id: string;
-        scheduleId: string;
-        taskId: string | null;
-        status: string;
-        error: string | null;
-        triggeredAt: string;
-      }>;
-    }>(`/api/schedules/${id}/runs${qs}`);
-  },
-
-  validateCron: (cronExpression: string) =>
-    request<{ valid: boolean; error?: string; nextRun?: string; description?: string }>(
-      "/api/schedules/validate-cron",
-      {
-        method: "POST",
-        body: JSON.stringify({ cronExpression }),
-      },
-    ),
 
   getWsToken: () => request<{ token: string }>("/api/auth/ws-token"),
 
@@ -820,49 +843,6 @@ export const api = {
 
   removeTaskDependency: (taskId: string, depTaskId: string) =>
     request<void>(`/api/tasks/${taskId}/dependencies/${depTaskId}`, { method: "DELETE" }),
-
-  // Workflow Templates
-  listWorkflows: () => request<{ templates: any[] }>("/api/workflow-templates"),
-
-  getWorkflow: (id: string) => request<{ template: any }>(`/api/workflow-templates/${id}`),
-
-  createWorkflow: (data: {
-    name: string;
-    description?: string;
-    steps: Array<{
-      id: string;
-      title: string;
-      prompt: string;
-      repoUrl?: string;
-      agentType?: string;
-      dependsOn?: string[];
-    }>;
-    status?: string;
-  }) =>
-    request<{ template: any }>("/api/workflow-templates", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
-  updateWorkflow: (id: string, data: Record<string, unknown>) =>
-    request<{ template: any }>(`/api/workflow-templates/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    }),
-
-  deleteWorkflow: (id: string) =>
-    request<void>(`/api/workflow-templates/${id}`, { method: "DELETE" }),
-
-  runWorkflow: (templateId: string, data?: { repoUrlOverride?: string }) =>
-    request<{ workflowRun: any }>(`/api/workflow-templates/${templateId}/run`, {
-      method: "POST",
-      body: JSON.stringify(data ?? {}),
-    }),
-
-  getWorkflowRuns: (templateId: string) =>
-    request<{ runs: any[] }>(`/api/workflow-templates/${templateId}/runs`),
-
-  getWorkflowRun: (id: string) => request<{ workflowRun: any }>(`/api/workflow-runs/${id}`),
 
   // MCP Servers
   listMcpServers: (scope?: string) => {
@@ -1009,4 +989,313 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+
+  // Push Notifications
+  getVapidPublicKey: () => request<{ publicKey: string }>("/api/notifications/vapid-public-key"),
+
+  subscribePush: (data: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    userAgent?: string;
+  }) =>
+    request<{ ok: boolean }>("/api/notifications/subscribe", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  unsubscribePush: (data: { endpoint: string }) =>
+    request<void>("/api/notifications/subscribe", {
+      method: "DELETE",
+      body: JSON.stringify(data),
+    }),
+
+  listPushSubscriptions: () =>
+    request<{ subscriptions: any[] }>("/api/notifications/subscriptions"),
+
+  getNotificationPreferences: () =>
+    request<{ preferences: Record<string, { push: boolean }> }>("/api/notifications/preferences"),
+
+  updateNotificationPreferences: (prefs: Record<string, { push: boolean }>) =>
+    request<{ preferences: Record<string, { push: boolean }> }>("/api/notifications/preferences", {
+      method: "PUT",
+      body: JSON.stringify(prefs),
+    }),
+
+  testPushNotification: () =>
+    request<{ sent: number }>("/api/notifications/test", { method: "POST" }),
+
+  // Shared Directories (Cache)
+  listRepoSharedDirectories: (repoId: string) =>
+    request<{
+      directories: Array<{
+        id: string;
+        repoId: string;
+        name: string;
+        description: string | null;
+        mountLocation: string;
+        mountSubPath: string;
+        sizeGi: number;
+        scope: string;
+        lastClearedAt: string | null;
+        lastMountedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>(`/api/repos/${repoId}/shared-directories`),
+
+  createRepoSharedDirectory: (
+    repoId: string,
+    data: {
+      name: string;
+      description?: string;
+      mountLocation: "workspace" | "home";
+      mountSubPath: string;
+      sizeGi?: number;
+    },
+  ) =>
+    request<{ directory: any }>(`/api/repos/${repoId}/shared-directories`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateRepoSharedDirectory: (
+    repoId: string,
+    dirId: string,
+    data: { description?: string | null; sizeGi?: number },
+  ) =>
+    request<{ directory: any }>(`/api/repos/${repoId}/shared-directories/${dirId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteRepoSharedDirectory: (repoId: string, dirId: string) =>
+    request<void>(`/api/repos/${repoId}/shared-directories/${dirId}`, {
+      method: "DELETE",
+    }),
+
+  clearRepoSharedDirectory: (repoId: string, dirId: string) =>
+    request<{ ok: boolean }>(`/api/repos/${repoId}/shared-directories/${dirId}/clear`, {
+      method: "POST",
+    }),
+
+  getRepoSharedDirectoryUsage: (repoId: string, dirId: string) =>
+    request<{ usage: string | null }>(`/api/repos/${repoId}/shared-directories/${dirId}/usage`, {
+      method: "POST",
+    }),
+
+  recycleRepoPods: (repoId: string) =>
+    request<{ ok: boolean; recycled: number }>(`/api/repos/${repoId}/pods/recycle`, {
+      method: "POST",
+    }),
+
+  // Workflows
+  listWorkflows: () => request<{ workflows: any[] }>("/api/workflows"),
+
+  getWorkflow: (id: string) => request<{ workflow: any }>(`/api/workflows/${id}`),
+
+  createWorkflow: (data: {
+    name: string;
+    description?: string;
+    promptTemplate: string;
+    agentRuntime?: string;
+    model?: string;
+    maxTurns?: number;
+    budgetUsd?: string;
+    maxConcurrent?: number;
+    maxRetries?: number;
+    warmPoolSize?: number;
+    enabled?: boolean;
+    environmentSpec?: Record<string, unknown>;
+    paramsSchema?: Record<string, unknown>;
+  }) =>
+    request<{ workflow: any }>("/api/workflows", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateWorkflow: (id: string, data: Record<string, unknown>) =>
+    request<{ workflow: any }>(`/api/workflows/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteWorkflow: (id: string) => request<void>(`/api/workflows/${id}`, { method: "DELETE" }),
+
+  cloneWorkflow: (id: string) =>
+    request<{ workflow: any }>(`/api/workflows/${id}/clone`, { method: "POST" }),
+
+  runWorkflow: (workflowId: string, params?: Record<string, unknown> | null) =>
+    request<{ run: any }>(`/api/workflows/${workflowId}/runs`, {
+      method: "POST",
+      body: JSON.stringify({ params: params ?? null }),
+    }),
+
+  getWorkflowRuns: (workflowId: string) =>
+    request<{ runs: any[] }>(`/api/workflows/${workflowId}/runs`),
+
+  listWorkflowRuns: (workflowId: string, limit?: number) => {
+    const qs = limit ? `?limit=${limit}` : "";
+    return request<{ runs: any[] }>(`/api/workflows/${workflowId}/runs${qs}`);
+  },
+
+  getWorkflowRun: (id: string) => request<{ run: any }>(`/api/workflow-runs/${id}`),
+
+  // Workflow Triggers
+  getWorkflowTriggers: (workflowId: string) =>
+    request<{ triggers: any[] }>(`/api/workflows/${workflowId}/triggers`),
+
+  listWorkflowTriggers: (workflowId: string) =>
+    request<{ triggers: any[] }>(`/api/workflows/${workflowId}/triggers`),
+
+  retryWorkflowRun: (id: string) =>
+    request<{ run: any }>(`/api/workflow-runs/${id}/retry`, { method: "POST" }),
+
+  cancelWorkflowRun: (id: string) =>
+    request<{ run: any }>(`/api/workflow-runs/${id}/cancel`, { method: "POST" }),
+
+  getWorkflowRunLogs: (id: string, opts?: { limit?: number; offset?: number }) => {
+    const params = new URLSearchParams();
+    if (opts?.limit != null) params.set("limit", String(opts.limit));
+    if (opts?.offset != null) params.set("offset", String(opts.offset));
+    const qs = params.toString();
+    return request<{ logs: any[] }>(`/api/workflow-runs/${id}/logs${qs ? `?${qs}` : ""}`);
+  },
+
+  createWorkflowTrigger: (
+    workflowId: string,
+    data: {
+      type: "manual" | "schedule" | "webhook";
+      config?: Record<string, unknown>;
+      paramMapping?: Record<string, unknown>;
+      enabled?: boolean;
+    },
+  ) =>
+    request<{ trigger: any }>(`/api/workflows/${workflowId}/triggers`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateWorkflowTrigger: (workflowId: string, triggerId: string, data: Record<string, unknown>) =>
+    request<{ trigger: any }>(`/api/workflows/${workflowId}/triggers/${triggerId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteWorkflowTrigger: (workflowId: string, triggerId: string) =>
+    request<void>(`/api/workflows/${workflowId}/triggers/${triggerId}`, {
+      method: "DELETE",
+    }),
+
+  // Webhooks (outbound notifications fired on task/workflow events)
+  listWebhooks: () => request<{ webhooks: any[] }>("/api/webhooks"),
+
+  getWebhook: (id: string) => request<{ webhook: any }>(`/api/webhooks/${id}`),
+
+  createWebhook: (data: { url: string; events: string[]; secret?: string; description?: string }) =>
+    request<{ webhook: any }>("/api/webhooks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateWebhook: (
+    id: string,
+    data: {
+      url?: string;
+      events?: string[];
+      secret?: string | null;
+      description?: string | null;
+      active?: boolean;
+    },
+  ) =>
+    request<{ webhook: any }>(`/api/webhooks/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteWebhook: (id: string) => request<void>(`/api/webhooks/${id}`, { method: "DELETE" }),
+
+  testWebhook: (id: string, event?: string) =>
+    request<{ delivery: any }>(`/api/webhooks/${id}/test`, {
+      method: "POST",
+      body: JSON.stringify(event ? { event } : {}),
+    }),
+
+  listWebhookDeliveries: (id: string, limit?: number) => {
+    const qs = limit ? `?limit=${limit}` : "";
+    return request<{ deliveries: any[] }>(`/api/webhooks/${id}/deliveries${qs}`);
+  },
+
+  // Connections (external service integrations for agents)
+  listConnectionProviders: () => request<{ providers: any[] }>("/api/connection-providers"),
+
+  listConnections: () => request<{ connections: any[] }>("/api/connections"),
+
+  createConnection: (data: Record<string, unknown>) =>
+    request<{ connection: any }>("/api/connections", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateConnection: (id: string, data: Record<string, unknown>) =>
+    request<{ connection: any }>(`/api/connections/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteConnection: (id: string) => request<void>(`/api/connections/${id}`, { method: "DELETE" }),
+
+  testConnection: (id: string) =>
+    request<{ status: string; message: string }>(`/api/connections/${id}/test`, {
+      method: "POST",
+    }),
+
+  createConnectionAssignment: (connectionId: string, data: Record<string, unknown>) =>
+    request<{ assignment: any }>(`/api/connections/${connectionId}/assignments`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  listRepoConnections: (repoId: string) =>
+    request<{ connections: any[] }>(`/api/repos/${repoId}/connections`),
+
+  deleteConnectionAssignment: (id: string) =>
+    request<void>(`/api/connection-assignments/${id}`, { method: "DELETE" }),
+
+  // Activity feed
+  getActivityFeed: (params?: {
+    days?: number;
+    type?: string;
+    userId?: string;
+    resourceType?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params) {
+      for (const [key, val] of Object.entries(params)) {
+        if (val != null && val !== "") qs.set(key, String(val));
+      }
+    }
+    const query = qs.toString();
+    return request<{
+      items: Array<{
+        id: string;
+        type: "action" | "task_event" | "auth_event" | "infra_event";
+        timestamp: string;
+        actor?: { id: string; displayName: string; avatarUrl?: string | null } | null;
+        action: string;
+        resourceType: string;
+        resourceId?: string | null;
+        summary: string;
+        details?: Record<string, unknown> | null;
+      }>;
+      total: number;
+      stats: {
+        actions: number;
+        taskEvents: number;
+        authEvents: number;
+        infraEvents: number;
+      };
+    }>(`/api/activity${query ? `?${query}` : ""}`);
+  },
 };
