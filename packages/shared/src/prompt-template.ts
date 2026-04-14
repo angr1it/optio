@@ -123,6 +123,7 @@ concurrently on this same repository — each on its own branch. You MUST stay i
 
 - Work only on what the task file describes. Do not refactor unrelated code.
 - Follow the existing code style and conventions in this repository.
+- Use environment variables for infrastructure access (for example \`REDIS_URL\`). Do not assume localhost services.
 - If you get stuck or need information you don't have, stop and explain what you need.
 - Do not modify CI/CD configuration unless the task specifically requires it.
 `;
