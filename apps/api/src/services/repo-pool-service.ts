@@ -202,6 +202,15 @@ export async function getOrCreateRepoPod(
   });
 }
 
+function getHomePvcConfig(): { size: string; storageClass?: string } {
+  const size = process.env.OPTIO_AGENT_PVC_SIZE ?? process.env.OPTIO_HOME_PVC_SIZE ?? "10Gi";
+  const storageClass =
+    process.env.OPTIO_AGENT_PVC_STORAGE_CLASS ||
+    process.env.OPTIO_HOME_PVC_STORAGE_CLASS ||
+    undefined;
+  return { size, storageClass };
+}
+
 export function resolveImage(imageConfig?: RepoImageConfig): string {
   if (imageConfig?.customImage) return imageConfig.customImage;
   if (imageConfig?.preset && imageConfig.preset in PRESET_IMAGES) {
@@ -259,6 +268,7 @@ async function createRepoPod(
 
   const pvcSuffix = instanceIndex > 0 ? `-${instanceIndex}` : "";
   const pvcName = `optio-home-${repoUrl.replace(/[^a-zA-Z0-9]/g, "-").slice(0, 40)}${pvcSuffix}`;
+  const homePvc = getHomePvcConfig();
   let pvcReady = false;
   try {
     const { execFile } = await import("node:child_process");
@@ -271,6 +281,9 @@ async function createRepoPod(
       pvcReady = true;
     } catch {
       // PVC doesn't exist, create it
+      const storageClassLine = homePvc.storageClass
+        ? `  storageClassName: ${homePvc.storageClass}\n`
+        : "";
       const pvcManifest = `apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -281,9 +294,9 @@ metadata:
     optio.type: home-pvc
 spec:
   accessModes: [ReadWriteOnce]
-  resources:
+${storageClassLine}  resources:
     requests:
-      storage: 5Gi`;
+      storage: ${homePvc.size}`;
       // Use bash -c with heredoc since execFile doesn't support stdin input
       await execFileAsync("bash", ["-c", `echo '${pvcManifest}' | kubectl apply -f - -n optio`]);
       pvcReady = true;
@@ -740,14 +753,13 @@ async function createRepoPodViaStatefulSet(
     }
 
     // Ensure StatefulSet exists and scale to needed replica count
-    const homePvcSize = process.env.OPTIO_HOME_PVC_SIZE ?? "10Gi";
-    const homePvcStorageClass = process.env.OPTIO_HOME_PVC_STORAGE_CLASS || undefined;
+    const homePvc = getHomePvcConfig();
 
     const sts = await manager.ensureStatefulSet({
       name: stsName,
       spec,
-      homePvcSize,
-      homePvcStorageClass,
+      homePvcSize: homePvc.size,
+      homePvcStorageClass: homePvc.storageClass,
     });
 
     // Scale up if needed

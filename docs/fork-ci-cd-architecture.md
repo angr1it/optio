@@ -139,6 +139,11 @@ Use repository variables for non-secret coordinates:
 - `OPTIO_DOMAIN`
 - `OPTIO_PUBLIC_URL`
 - `LETSENCRYPT_EMAIL`
+- Optional agent image overrides:
+  - `AGENT_IMAGE_REPOSITORY`
+  - `AGENT_IMAGE_PREFIX`
+  - `AGENT_IMAGE_TAG`
+  - `AGENT_IMAGE_PULL_POLICY`
 
 ### Production Environment Secrets
 

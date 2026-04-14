@@ -43,6 +43,10 @@ jobs:
       GITHUB_APP_BOT_NAME: ${{ secrets.OPTIO_GITHUB_APP_BOT_NAME }}
       GITHUB_APP_BOT_EMAIL: ${{ secrets.OPTIO_GITHUB_APP_BOT_EMAIL }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AGENT_IMAGE_REPOSITORY: ${{ vars.AGENT_IMAGE_REPOSITORY }}
+      AGENT_IMAGE_PREFIX: ${{ vars.AGENT_IMAGE_PREFIX }}
+      AGENT_IMAGE_TAG: ${{ vars.AGENT_IMAGE_TAG }}
+      AGENT_IMAGE_PULL_POLICY: ${{ vars.AGENT_IMAGE_PULL_POLICY }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1

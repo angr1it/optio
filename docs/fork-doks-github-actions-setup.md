@@ -103,6 +103,11 @@ Add these repository variables:
 2. `OPTIO_DOMAIN`
 3. `OPTIO_PUBLIC_URL`
 4. `LETSENCRYPT_EMAIL`
+5. Optional agent image overrides:
+   - `AGENT_IMAGE_REPOSITORY` (default: `ghcr.io/jonwiggins/optio-agent-base`)
+   - `AGENT_IMAGE_PREFIX` (default: `ghcr.io/jonwiggins/optio-agent-`)
+   - `AGENT_IMAGE_TAG` (default: `latest`)
+   - `AGENT_IMAGE_PULL_POLICY` (default: `Always` when tag is `latest`, else `IfNotPresent`)
 
 Suggested defaults:
 

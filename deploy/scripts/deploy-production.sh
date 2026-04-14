@@ -19,6 +19,18 @@ owner="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
 image_base="ghcr.io/${owner}"
 namespace="optio"
 release="optio"
+# Agent image can be overridden without changing release tags.
+# Defaults point to upstream prebuilt agent images to keep fork deploys stable.
+agent_image_repository="${AGENT_IMAGE_REPOSITORY:-ghcr.io/jonwiggins/optio-agent-base}"
+agent_image_prefix="${AGENT_IMAGE_PREFIX:-ghcr.io/jonwiggins/optio-agent-}"
+agent_image_tag="${AGENT_IMAGE_TAG:-latest}"
+if [[ -n "${AGENT_IMAGE_PULL_POLICY:-}" ]]; then
+  agent_image_pull_policy="${AGENT_IMAGE_PULL_POLICY}"
+elif [[ "${agent_image_tag}" == "latest" ]]; then
+  agent_image_pull_policy="Always"
+else
+  agent_image_pull_policy="IfNotPresent"
+fi
 
 if [[ "${RELEASE_TAG}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$ ]]; then
   chart_version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}${BASH_REMATCH[4]}"
@@ -97,11 +109,13 @@ helm_image_args=(
   --set-string api.image.repository="${image_base}/optio-api"
   --set-string web.image.repository="${image_base}/optio-web"
   --set-string optio.image.repository="${image_base}/optio-optio"
-  --set-string agent.image.repository="${image_base}/optio-agent-base"
+  --set-string agent.image.repository="${agent_image_repository}"
+  --set-string agent.image.prefix="${agent_image_prefix}"
   --set-string api.image.tag="${RELEASE_TAG}"
   --set-string web.image.tag="${RELEASE_TAG}"
   --set-string optio.image.tag="${RELEASE_TAG}"
-  --set-string agent.image.tag="${RELEASE_TAG}"
+  --set-string agent.image.tag="${agent_image_tag}"
+  --set-string agent.imagePullPolicy="${agent_image_pull_policy}"
 )
 
 helm lint "${chart_path}" \

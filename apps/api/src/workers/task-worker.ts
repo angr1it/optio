@@ -545,6 +545,23 @@ export function startTaskWorker() {
         );
         const allEnv: Record<string, string> = { ...agentConfig.env, ...resolvedSecrets };
 
+        // Redis access for tasks:
+        // 1) explicit REDIS_URL secret (workspace/global), then
+        // 2) API process env from Helm/K8s secrets.
+        // This prevents task runs from falling back to localhost.
+        if (!allEnv.REDIS_URL) {
+          const redisUrl = await retrieveSecretWithFallback(
+            "REDIS_URL",
+            "global",
+            taskWorkspaceId,
+          ).catch(() => null);
+          if (redisUrl) {
+            allEnv.REDIS_URL = redisUrl as string;
+          } else if (process.env.REDIS_URL) {
+            allEnv.REDIS_URL = process.env.REDIS_URL;
+          }
+        }
+
         // Resolve git platform tokens (not part of adapter requiredSecrets since they're infra-level)
         for (const secretName of ["GITHUB_TOKEN", "GITLAB_TOKEN", "GITLAB_HOST"]) {
           if (!allEnv[secretName]) {
